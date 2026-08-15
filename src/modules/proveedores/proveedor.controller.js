@@ -1,10 +1,49 @@
 class ProveedorController {
-  async list(req, res) {
-    return res.status(200).json({ message: 'Listado de proveedores' });
+  async list(req, res, next) {
+    try {
+      return res.status(200).json({ message: 'Listado de proveedores', data: [] });
+    } catch (error) {
+      return next(error);
+    }
   }
 
-  async create(req, res) {
-    return res.status(201).json({ message: 'Proveedor creado', data: req.body });
+  async getById(req, res, next) {
+    try {
+      const { id } = req.params;
+      return res.status(200).json({ message: `Proveedor ${id}`, data: { id } });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async create(req, res, next) {
+    try {
+      return res.status(201).json({ message: 'Proveedor creado', data: req.body });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async update(req, res, next) {
+    try {
+      const { id } = req.params;
+      return res.status(200).json({ message: `Proveedor ${id} actualizado`, data: req.body });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async changeStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { activo } = req.body;
+      return res.status(200).json({
+        message: `Estado de proveedor ${id} actualizado`,
+        data: { id, activo },
+      });
+    } catch (error) {
+      return next(error);
+    }
   }
 }
 

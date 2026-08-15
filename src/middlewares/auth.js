@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const { env } = require('../config/env');
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -19,4 +19,4 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = authMiddleware;
+export default authMiddleware;

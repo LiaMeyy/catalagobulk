@@ -1,5 +1,5 @@
-const Redis = require('ioredis');
-const { env } = require('./env');
+import Redis from 'ioredis';
+import { env } from './env.js';
 
 const redis = new Redis(env.REDIS_URL);
 
@@ -11,4 +11,4 @@ redis.on('error', (error) => {
   console.error('Redis error:', error.message);
 });
 
-module.exports = redis;
+export default redis;
