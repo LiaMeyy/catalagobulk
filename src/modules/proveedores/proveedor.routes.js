@@ -1,5 +1,5 @@
-const express = require('express');
-const controller = require('./proveedor.controller');
+import express from 'express';
+import controller from './proveedor.controller.js';
 
 const router = express.Router();
 
@@ -7,6 +7,6 @@ router.get('/', controller.list);
 router.get('/:id', controller.getById);
 router.post('/', controller.create);
 router.put('/:id', controller.update);
-router.put('/:id/status', controller.changeStatus);
+router.delete('/:id', controller.delete);
 
-module.exports = router;
+export default router;

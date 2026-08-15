@@ -8,4 +8,4 @@ class ProductoRepository {
   }
 }
 
-module.exports = new ProductoRepository();
+export default new ProductoRepository();

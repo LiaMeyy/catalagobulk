@@ -1,34 +1,40 @@
 class AuthController {
-  async login(req, res, next) {
-    try {
-      return res.status(200).json({
-        message: 'Login exitoso',
-        data: req.body,
-      });
-    } catch (error) {
-      return next(error);
-    }
-  }
-
   async register(req, res, next) {
     try {
+      const { email, password, rol } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email y password son obligatorios.' });
+      }
+
+      const userRol = rol || 'user';
+
       return res.status(201).json({
         message: 'Usuario registrado',
-        data: req.body,
+        data: {
+          id: 'generated-id',
+          email,
+          rol: userRol
+        }
       });
     } catch (error) {
       return next(error);
     }
   }
 
-  async me(req, res, next) {
+  async login(req, res, next) {
     try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email y password son obligatorios.' });
+      }
+
       return res.status(200).json({
-        message: 'Perfil del usuario',
+        message: 'Login exitoso',
         data: {
-          id: req.user?.id || 1,
-          name: 'Usuario actual',
-        },
+          token: 'jwt-token-placeholder'
+        }
       });
     } catch (error) {
       return next(error);
@@ -36,4 +42,4 @@ class AuthController {
   }
 }
 
-module.exports = new AuthController();
+export default new AuthController();

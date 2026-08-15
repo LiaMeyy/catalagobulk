@@ -8,4 +8,4 @@ class ProveedorService {
   }
 }
 
-module.exports = ProveedorService;
+export default ProveedorService;

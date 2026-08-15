@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+import mongoose from 'mongoose';
 
 const errorItemSchema = new mongoose.Schema(
   {
@@ -7,7 +7,7 @@ const errorItemSchema = new mongoose.Schema(
     motivo: { type: String, required: true },
   },
   { _id: false }
-)
+);
 
 const importJobSchema = new mongoose.Schema(
   {
@@ -31,6 +31,6 @@ const importJobSchema = new mongoose.Schema(
     finishedAt: { type: Date, default: null },
   },
   { timestamps: true }
-)
+);
 
-module.exports = mongoose.model('ImportJob', importJobSchema, 'import_jobs')
+export default mongoose.model('ImportJob', importJobSchema, 'import_jobs');

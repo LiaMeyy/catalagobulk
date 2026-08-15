@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const productoSchema = new mongoose.Schema(
   {
@@ -81,10 +81,9 @@ const productoSchema = new mongoose.Schema(
   }
 );
 
-// disponible se calcula automáticamente según el stock
 productoSchema.pre('save', function (next) {
   this.disponible = this.stock > 0;
   next();
 });
 
-module.exports = mongoose.model('Producto', productoSchema, 'productos');
+export default mongoose.model('Producto', productoSchema, 'productos');

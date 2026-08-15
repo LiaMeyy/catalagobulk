@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const { env } = require('../../config/env');
+import jwt from 'jsonwebtoken';
+import { env } from '../../config/env.js';
 
 class AuthService {
   static async login({ email, password }) {
@@ -18,4 +18,4 @@ class AuthService {
   }
 }
 
-module.exports = AuthService;
+export default AuthService;

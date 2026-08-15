@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 
 const categoriaSchema = new mongoose.Schema(
   {
@@ -11,6 +12,6 @@ const categoriaSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
-)
+);
 
-module.exports = mongoose.model('Categoria', categoriaSchema, 'categorias')
+export default mongoose.model('Categoria', categoriaSchema, 'categorias');

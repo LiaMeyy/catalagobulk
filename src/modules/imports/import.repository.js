@@ -8,4 +8,4 @@ class ImportRepository {
   }
 }
 
-module.exports = new ImportRepository();
+export default new ImportRepository();

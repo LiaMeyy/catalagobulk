@@ -8,4 +8,4 @@ class ProductoService {
   }
 }
 
-module.exports = ProductoService;
+export default ProductoService;
