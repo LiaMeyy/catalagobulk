@@ -33,14 +33,10 @@ class ProveedorController {
     }
   }
 
-  async changeStatus(req, res, next) {
+  async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const { activo } = req.body;
-      return res.status(200).json({
-        message: `Estado de proveedor ${id} actualizado`,
-        data: { id, activo },
-      });
+      return res.status(204).send()
     } catch (error) {
       return next(error);
     }
