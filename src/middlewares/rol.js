@@ -14,4 +14,4 @@ function rolMiddleware(rolesPermitidos = []) {
   };
 }
 
-module.exports = rolMiddleware;
+export default rolMiddleware;

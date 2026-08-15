@@ -1,4 +1,4 @@
-const socketIo = require('socket.io');
+import socketIo from 'socket.io';
 
 function initSocket(server) {
   const io = socketIo(server, {
@@ -18,4 +18,4 @@ function initSocket(server) {
   return io;
 }
 
-module.exports = initSocket;
+export default initSocket;

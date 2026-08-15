@@ -1,8 +1,8 @@
-const Queue = require('bull');
-const { env } = require('../config/env');
+import Queue from 'bull';
+import { env } from '../config/env.js';
 
 const importQueue = new Queue('import-bulk', {
   redis: env.REDIS_URL,
 });
 
-module.exports = importQueue;
+export default importQueue;
