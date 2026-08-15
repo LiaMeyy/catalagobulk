@@ -47,4 +47,4 @@ class ProveedorController {
   }
 }
 
-module.exports = new ProveedorController();
+export default new ProveedorController();

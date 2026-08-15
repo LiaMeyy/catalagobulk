@@ -1,5 +1,5 @@
-const express = require('express');
-const controller = require('./producto.controller');
+import express from 'express';
+import controller from './producto.controller.js';
 
 const router = express.Router();
 
@@ -9,4 +9,4 @@ router.post('/', controller.create);
 router.put('/:id', controller.update);
 router.put('/:id/status', controller.changeStatus);
 
-module.exports = router;
+export default router;

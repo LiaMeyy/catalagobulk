@@ -47,4 +47,4 @@ class UsuarioController {
   }
 }
 
-module.exports = new UsuarioController();
+export default new UsuarioController();

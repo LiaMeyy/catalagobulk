@@ -8,4 +8,4 @@ class CategoriaRepository {
   }
 }
 
-module.exports = new CategoriaRepository();
+export default new CategoriaRepository();

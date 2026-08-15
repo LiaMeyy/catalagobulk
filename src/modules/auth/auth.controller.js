@@ -36,4 +36,4 @@ class AuthController {
   }
 }
 
-module.exports = new AuthController();
+export default new AuthController();

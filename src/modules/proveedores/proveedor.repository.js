@@ -8,4 +8,4 @@ class ProveedorRepository {
   }
 }
 
-module.exports = new ProveedorRepository();
+export default new ProveedorRepository();

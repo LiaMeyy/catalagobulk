@@ -8,4 +8,4 @@ class CategoriaService {
   }
 }
 
-module.exports = CategoriaService;
+export default CategoriaService;

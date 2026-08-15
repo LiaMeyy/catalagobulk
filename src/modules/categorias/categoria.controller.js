@@ -47,4 +47,4 @@ class CategoriaController {
   }
 }
 
-module.exports = new CategoriaController();
+export default new CategoriaController();

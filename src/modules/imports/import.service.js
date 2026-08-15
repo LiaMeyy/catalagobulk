@@ -7,4 +7,4 @@ class ImportService {
   }
 }
 
-module.exports = ImportService;
+export default ImportService;
