@@ -20,20 +20,6 @@ class AuthController {
       return next(error);
     }
   }
-
-  async me(req, res, next) {
-    try {
-      return res.status(200).json({
-        message: 'Perfil del usuario',
-        data: {
-          id: req.user?.id || 1,
-          name: 'Usuario actual',
-        },
-      });
-    } catch (error) {
-      return next(error);
-    }
-  }
 }
 
 export default new AuthController();
