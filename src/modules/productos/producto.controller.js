@@ -7,6 +7,14 @@ class ProductoController {
     }
   }
 
+  async stats(req, res, next) {
+    try {
+      return res.status(200).json({message: `Características de los productos`, data: []})
+    } catch (error) {
+      return next(error)
+    }
+  }
+
   async getById(req, res, next) {
     try {
       const { id } = req.params;
@@ -33,16 +41,12 @@ class ProductoController {
     }
   }
 
-  async changeStatus(req, res, next) {
+  async delete(req, res, next){
     try {
-      const { id } = req.params;
-      const { activo } = req.body;
-      return res.status(200).json({
-        message: `Estado de producto ${id} actualizado`,
-        data: { id, activo },
-      });
+      const {id} = req.params;
+      return res.status(204).send()
     } catch (error) {
-      return next(error);
+      return next(error)
     }
   }
 }

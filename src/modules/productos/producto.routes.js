@@ -4,9 +4,10 @@ import controller from './producto.controller.js';
 const router = express.Router();
 
 router.get('/', controller.list);
+router.get('/stats', controller.stats)
 router.get('/:id', controller.getById);
 router.post('/', controller.create);
 router.put('/:id', controller.update);
-router.put('/:id/status', controller.changeStatus);
+router.delete('/:id', controller.delete);
 
 export default router;
