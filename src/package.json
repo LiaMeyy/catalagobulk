@@ -1,22 +1,33 @@
 {
-  "name": "catalagobulk",
+  "name": "catalogobulk",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LiaMeyy/catalagobulk.git"
+    "url": "git+https://github.com/LiaMeyy/catalogobulk.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/LiaMeyy/catalagobulk/issues"
+    "url": "https://github.com/LiaMeyy/catalogobulk/issues"
   },
-  "homepage": "https://github.com/LiaMeyy/catalagobulk#readme",
-  "description": ""
+  "homepage": "https://github.com/LiaMeyy/catalogobulk#readme",
+  "description": "",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.3",
+    "morgan": "^1.11.0"
+  }
 }
