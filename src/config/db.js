@@ -3,10 +3,7 @@ import { env } from './env.js';
 
 export async function connectDB() {
   try {
-    await mongoose.connect(env.DB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(env.DB_URI);
 
     console.log('MongoDB conectado');
     return mongoose.connection;
