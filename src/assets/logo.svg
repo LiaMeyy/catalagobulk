@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <rect width="120" height="120" rx="26" fill="#2e7d32" />
+  <!-- 3D isometric package representing Bulk / Catalog -->
+  <path d="M60 22 L96 42 L60 62 L24 42 Z" fill="#ffffff" opacity="0.95" />
+  <path d="M24 42 L60 62 L60 98 L24 78 Z" fill="#c8e6c9" />
+  <path d="M96 42 L60 62 L60 98 L96 78 Z" fill="#a5d6a7" />
+  <!-- Bulk fast import indicator stripe -->
+  <path d="M60 22 L60 62" stroke="#2e7d32" stroke-width="3" stroke-linecap="round" />
+</svg>

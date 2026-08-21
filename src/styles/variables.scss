@@ -1,0 +1,68 @@
+// =============================================================================
+// /styles/variables.scss
+// Paleta de colores moderna y variables SCSS de Quasar para CatálogoBulk
+// =============================================================================
+
+// Colores primarios (Esmeralda / Bosque moderno)
+$primary: #15803d;      // green-8 moderno
+$primary-dark: #166534; // green-9
+$primary-light: #22c55e;// green-5
+$secondary: #0f766e;    // teal-7
+$accent: #6366f1;       // indigo moderno
+
+$dark: #0f172a;         // slate-900
+$dark-page: #020617;    // slate-950
+
+// Estados semánticos
+$positive: #16a34a;
+$negative: #dc2626;
+$info: #0284c7;
+$warning: #d97706;
+
+// Paleta de apoyo CatálogoBulk
+$verde-card: #15803d;
+$verde-oscuro: #14532d;
+$verde-hover: #4ade80;
+$verde-suave: #f0fdf4;
+$verde-borde: #bbf7d0;
+
+// Neutros Slate modernos
+$texto-principal: #0f172a;
+$texto-fuerte: #1e293b;
+$texto-secundario: #64748b;
+$color-texto-suave: #64748b;
+$color-borde: #e2e8f0;
+$color-borde-hover: #cbd5e1;
+$color-fondo-app: #f8fafc;
+$color-tarjeta: #ffffff;
+
+// Medidas
+$radio-tarjeta: 12px;
+$radio-dialogo: 16px;
+$radio-boton: 8px;
+$ancho-maximo-contenido: 1320px;
+
+// Espaciado consistente (nombres distintos para no chocar con variables internas de Quasar)
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// Sombras elevadas
+$shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+$shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+$shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);
+$shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.16);
+
+// Transiciones
+$transition-fast: 120ms ease;
+$transition-normal: 200ms ease;
+$transition-slow: 300ms ease;
+
+// Z-index scale
+$z-dropdown: 100;
+$z-sticky: 200;
+$z-modal-backdrop: 300;
+$z-modal: 400;
+$z-toast: 500;
