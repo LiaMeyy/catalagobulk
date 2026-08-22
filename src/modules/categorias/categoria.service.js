@@ -18,4 +18,9 @@ async function actualizar(id, datos) {
   return categoria
 }
 
-module.exports = { listar, obtenerPorSlug, actualizar }
+async function eliminar(id) {
+  const categoria = await categoriaRepository.deleteById(id)
+  if (!categoria) throw new AppError('Categoría no encontrada', 404, 'CATEGORIA_NOT_FOUND')
+}
+
+module.exports = { listar, obtenerPorSlug, actualizar, eliminar }

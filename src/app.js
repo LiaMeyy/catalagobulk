@@ -1,4 +1,5 @@
 const express = require('express')
+const cors = require('cors')
 const mongoose = require('mongoose')
 const { redisClient } = require('./config/redis')
 const errorHandler = require('./middlewares/errorHandler')
@@ -10,9 +11,11 @@ const productoRoutes = require('./modules/productos/producto.routes')
 const proveedorRoutes = require('./modules/proveedores/proveedor.routes')
 const categoriaRoutes = require('./modules/categorias/categoria.routes')
 const importRoutes = require('./modules/imports/import.routes')
+const usuarioRoutes = require('./modules/usuarios/usuario.routes')
 
 const app = express()
 
+app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
@@ -48,6 +51,7 @@ app.use('/api/productos', productoRoutes)
 app.use('/api/proveedores', proveedorRoutes)
 app.use('/api/categorias', categoriaRoutes)
 app.use('/api/imports', importRoutes)
+app.use('/api/usuarios', usuarioRoutes)
 
 // Manejador de errores (último middleware)
 app.use(errorHandler)

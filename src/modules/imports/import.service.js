@@ -36,7 +36,7 @@ async function obtenerPorId(id, usuario) {
   if (!importJob) throw new AppError('Import no encontrado', 404, 'IMPORT_NOT_FOUND')
 
   // Solo el dueño o admin puede verlo
-  if (usuario.rol !== 'admin' && importJob.usuarioId.toString() !== usuario.id.toString()) {
+  if (usuario.rol !== 'admin' && importJob.usuarioId.toString() !== usuario.id) {
     throw new AppError('Acceso denegado', 403, 'SIN_PERMISO')
   }
 

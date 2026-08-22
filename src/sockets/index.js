@@ -22,8 +22,9 @@ function inicializarSockets(httpServer) {
     }
   })
 
-  queueEvents.on('failed', ({ jobId, failedReason }) => {
-    io.emit(`import:${jobId}:failed`, { jobId, motivo: failedReason })
+  queueEvents.on('failed', ({ jobId, failedReason, returnvalue }) => {
+    const importJobId = returnvalue?.importJobId || jobId
+    io.emit(`import:${importJobId}:failed`, { importJobId, motivo: failedReason })
   })
 
   io.on('connection', (socket) => {

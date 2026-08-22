@@ -4,6 +4,7 @@ require('../config/env')
 const { Worker } = require('bullmq')
 const mongoose = require('mongoose')
 const fs = require('fs')
+const path = require('path')
 const readline = require('readline')
 const { redisClient, conectarRedis } = require('../config/redis')
 const { MONGO_URI, BATCH_SIZE, IMPORT_ERRORS_CAP } = require('../config/env')
@@ -102,13 +103,37 @@ async function* leerJSON(ruta) {
 async function procesarImport(job) {
   const { importJobId, archivoRuta, proveedorId } = job.data
 
-  await ImportJob.findByIdAndUpdate(importJobId, {
-    estado: 'processing',
-    startedAt: new Date(),
-  })
+  // Transición atómica: solo si está en 'pending' pasa a 'processing'
+  const jobActualizado = await ImportJob.findOneAndUpdate(
+    { _id: importJobId, estado: 'pending' },
+    { estado: 'processing', startedAt: new Date() },
+    { new: true }
+  )
 
-  const ext = archivoRuta.split('.').pop().toLowerCase()
-  const generador = ext === 'csv' ? leerCSV(archivoRuta) : leerJSON(archivoRuta)
+  if (!jobActualizado) {
+    // Ya fue tomado por otro worker o no estaba en pending
+    throw new Error('ImportJob no está en estado pending o no existe')
+  }
+
+  let generador
+  try {
+    const ext = path.extname(archivoRuta).toLowerCase()
+    if (ext === '.csv') {
+      generador = leerCSV(archivoRuta)
+    } else if (ext === '.json') {
+      generador = leerJSON(archivoRuta)
+    } else {
+      throw new Error('Extensión de archivo no soportada')
+    }
+  } catch (err) {
+    // Error irrecuperable: archivo corrupto/ilegible, header inválido
+    await ImportJob.findByIdAndUpdate(importJobId, {
+      estado: 'failed',
+      motivoFallo: err.message,
+      finishedAt: new Date(),
+    })
+    throw err
+  }
 
   let procesados = 0
   let exitosos = 0
@@ -117,89 +142,108 @@ async function procesarImport(job) {
   let lote = []
   const skusVistos = new Set()
   const categoriasNuevas = new Set()
+  const filasEnLote = [] // Para rastrear número de fila de cada producto en el lote
 
-  for await (const fila of generador) {
-    procesados++
-    const numFila = procesados
-    const erroresFila = validarFila(fila, numFila)
+  try {
+    for await (const fila of generador) {
+      procesados++
+      const numFila = procesados
+      const erroresFila = validarFila(fila, numFila)
 
-    if (erroresFila.length > 0) {
-      fallidos++
-      if (errores.length < IMPORT_ERRORS_CAP) {
-        errores.push({ fila: numFila, sku: fila.sku || null, motivo: erroresFila.join(', ') })
+      if (erroresFila.length > 0) {
+        fallidos++
+        if (errores.length < IMPORT_ERRORS_CAP) {
+          errores.push({ fila: numFila, sku: fila.sku || null, motivo: erroresFila.join(', ') })
+        }
+        continue
       }
-      continue
+
+      const skuNorm = fila.sku.trim().toUpperCase()
+
+      // Duplicado dentro del archivo
+      if (skusVistos.has(skuNorm)) {
+        fallidos++
+        if (errores.length < IMPORT_ERRORS_CAP) {
+          errores.push({ fila: numFila, sku: skuNorm, motivo: 'sku duplicado' })
+        }
+        continue
+      }
+      skusVistos.add(skuNorm)
+
+      // Advertencia imagenUrl inválida
+      if (fila.imagenUrl && fila.imagenUrl.trim() && !esUrlValida(fila.imagenUrl.trim())) {
+        if (errores.length < IMPORT_ERRORS_CAP) {
+          errores.push({ fila: numFila, sku: skuNorm, motivo: 'imagenUrl inválida, ignorada' })
+        }
+      }
+
+      const producto = normalizarFila(fila, proveedorId)
+      categoriasNuevas.add(producto.categoria)
+      lote.push(producto)
+      filasEnLote.push(numFila)
+
+      // Insertar por lotes
+      if (lote.length >= BATCH_SIZE) {
+        const resultado = await insertarLote(lote, filasEnLote, errores, fallidos, IMPORT_ERRORS_CAP)
+        exitosos += resultado.exitosos
+        fallidos = resultado.fallidos
+        errores = resultado.errores
+        lote = []
+        filasEnLote.length = 0
+
+        // Reportar progreso
+        await ImportJob.findByIdAndUpdate(importJobId, { procesados, exitosos, fallidos, errores })
+        await job.updateProgress({ importJobId, procesados, exitosos, fallidos })
+      }
     }
 
-    const skuNorm = fila.sku.trim().toUpperCase()
-
-    // Duplicado dentro del archivo
-    if (skusVistos.has(skuNorm)) {
-      fallidos++
-      if (errores.length < IMPORT_ERRORS_CAP) {
-        errores.push({ fila: numFila, sku: skuNorm, motivo: 'sku duplicado' })
-      }
-      continue
-    }
-    skusVistos.add(skuNorm)
-
-    // Advertencia imagenUrl inválida
-    if (fila.imagenUrl && fila.imagenUrl.trim() && !esUrlValida(fila.imagenUrl.trim())) {
-      if (errores.length < IMPORT_ERRORS_CAP) {
-        errores.push({ fila: numFila, sku: skuNorm, motivo: 'imagenUrl inválida, ignorada' })
-      }
-    }
-
-    const producto = normalizarFila(fila, proveedorId)
-    categoriasNuevas.add(producto.categoria)
-    lote.push(producto)
-
-    // Insertar por lotes
-    if (lote.length >= BATCH_SIZE) {
-      const resultado = await insertarLote(lote, errores, fallidos, numFila, IMPORT_ERRORS_CAP)
+    // Lote final
+    if (lote.length > 0) {
+      const resultado = await insertarLote(lote, filasEnLote, errores, fallidos, IMPORT_ERRORS_CAP)
       exitosos += resultado.exitosos
-      fallidos += resultado.fallidos
+      fallidos = resultado.fallidos
       errores = resultado.errores
-      lote = []
-
-      // Reportar progreso
-      await ImportJob.findByIdAndUpdate(importJobId, { procesados, exitosos, fallidos, errores })
-      await job.updateProgress({ importJobId, procesados, exitosos, fallidos })
     }
+
+    // Upsert categorías nuevas en batch (bulkWrite)
+    if (categoriasNuevas.size > 0) {
+      const ops = Array.from(categoriasNuevas).map((slug) => ({
+        updateOne: {
+          filter: { slug },
+          update: { $setOnInsert: { slug, nombre: slug.charAt(0).toUpperCase() + slug.slice(1), descripcion: null, imagenUrl: null } },
+          upsert: true,
+        },
+      }))
+      await Categoria.bulkWrite(ops)
+    }
+
+    await ImportJob.findByIdAndUpdate(importJobId, {
+      estado: 'completed',
+      total: procesados,
+      procesados,
+      exitosos,
+      fallidos,
+      errores,
+      finishedAt: new Date(),
+    })
+
+    return { importJobId, procesados, exitosos, fallidos }
+  } catch (err) {
+    // Error irrecuperable durante el procesamiento
+    await ImportJob.findByIdAndUpdate(importJobId, {
+      estado: 'failed',
+      motivoFallo: err.message,
+      finishedAt: new Date(),
+      procesados,
+      exitosos,
+      fallidos,
+      errores,
+    })
+    throw err
   }
-
-  // Lote final
-  if (lote.length > 0) {
-    const resultado = await insertarLote(lote, errores, fallidos, procesados, IMPORT_ERRORS_CAP)
-    exitosos += resultado.exitosos
-    fallidos += resultado.fallidos
-    errores = resultado.errores
-  }
-
-  // Upsert categorías nuevas
-  for (const slug of categoriasNuevas) {
-    const nombre = slug.charAt(0).toUpperCase() + slug.slice(1)
-    await Categoria.findOneAndUpdate(
-      { slug },
-      { $setOnInsert: { slug, nombre, descripcion: null, imagenUrl: null } },
-      { upsert: true }
-    )
-  }
-
-  await ImportJob.findByIdAndUpdate(importJobId, {
-    estado: 'completed',
-    total: procesados,
-    procesados,
-    exitosos,
-    fallidos,
-    errores,
-    finishedAt: new Date(),
-  })
-
-  return { importJobId, procesados, exitosos, fallidos }
 }
 
-async function insertarLote(lote, errores, fallidos, numFila, cap) {
+async function insertarLote(lote, filasEnLote, errores, fallidos, cap) {
   try {
     await Producto.insertMany(lote, { ordered: false })
     return { exitosos: lote.length, fallidos, errores }
@@ -209,9 +253,10 @@ async function insertarLote(lote, errores, fallidos, numFila, cap) {
       for (const we of err.writeErrors) {
         exitososLote--
         fallidos++
+        const filaNum = filasEnLote[we.index] || 0
         const prod = lote[we.index]
         if (errores.length < cap) {
-          errores.push({ fila: numFila, sku: prod?.sku || null, motivo: 'sku duplicado' })
+          errores.push({ fila: filaNum, sku: prod?.sku || null, motivo: 'sku duplicado' })
         }
       }
     }

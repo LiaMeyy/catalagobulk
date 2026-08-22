@@ -2,8 +2,8 @@ const productoRepository = require('./producto.repository')
 const Proveedor = require('../proveedores/proveedor.model')
 const AppError = require('../../errors/AppError')
 
-async function listar({ page, limit, categoria, proveedor, disponible }) {
-  return productoRepository.findAll({ page, limit, categoria, proveedor, disponible })
+async function listar({ page, limit, categoria, proveedor, disponible, search, sortBy, descending }) {
+  return productoRepository.findAll({ page, limit, categoria, proveedor, disponible, search, sortBy, descending })
 }
 
 async function obtenerPorId(id) {

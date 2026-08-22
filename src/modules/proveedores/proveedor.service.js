@@ -23,6 +23,12 @@ async function crear(datos) {
 }
 
 async function actualizar(id, datos) {
+  const duplicado = await proveedorRepository.findDuplicadoParaUpdate(id, {
+    nombre: datos.nombre,
+    slug: datos.slug,
+  })
+  if (duplicado) throw new AppError('Nombre o slug duplicado', 409, 'PROVEEDOR_DUPLICADO')
+
   const proveedor = await proveedorRepository.updateById(id, datos)
   if (!proveedor) throw new AppError('Proveedor no encontrado', 404, 'PROVEEDOR_NOT_FOUND')
   return proveedor

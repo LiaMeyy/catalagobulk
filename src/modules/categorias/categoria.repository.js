@@ -12,8 +12,16 @@ async function findById(id) {
   return Categoria.findById(id)
 }
 
+async function crear(datos) {
+  return Categoria.create(datos)
+}
+
 async function updateById(id, datos) {
   return Categoria.findByIdAndUpdate(id, datos, { new: true, runValidators: true })
+}
+
+async function deleteById(id) {
+  return Categoria.findByIdAndDelete(id)
 }
 
 async function upsertBySlug(slug) {
@@ -25,4 +33,4 @@ async function upsertBySlug(slug) {
   )
 }
 
-module.exports = { findAll, findBySlug, findById, updateById, upsertBySlug }
+module.exports = { findAll, findBySlug, findById, crear, updateById, deleteById, upsertBySlug }

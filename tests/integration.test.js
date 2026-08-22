@@ -11,6 +11,7 @@ describe('Fase 1: Auth y CRUDs (Pruebas de Integración)', () => {
   let userToken = ''
   let adminToken = ''
   let proveedorId = ''
+  let proveedorBetaId = ''
   let productoId = ''
 
   beforeAll(async () => {
@@ -169,6 +170,32 @@ describe('Fase 1: Auth y CRUDs (Pruebas de Integración)', () => {
       expect(res.status).toBe(409)
       expect(res.body.error.codigo).toBe('PROVEEDOR_DUPLICADO')
     })
+
+    it('Admin crea un segundo proveedor para validar duplicados en actualización', async () => {
+      const res = await request(app)
+        .post('/api/proveedores')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          nombre: 'Proveedor Beta',
+          slug: 'proveedor-beta',
+        })
+
+      expect(res.status).toBe(201)
+      proveedorBetaId = res.body._id
+    })
+
+    it('Retorna 409 tipado al actualizar proveedor con nombre o slug duplicado', async () => {
+      const res = await request(app)
+        .put(`/api/proveedores/${proveedorBetaId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          nombre: 'Proveedor Alfa',
+          slug: 'proveedor-beta',
+        })
+
+      expect(res.status).toBe(409)
+      expect(res.body.error.codigo).toBe('PROVEEDOR_DUPLICADO')
+    })
   })
 
   describe('4. CRUD de Productos (/api/productos)', () => {
@@ -191,6 +218,24 @@ describe('Fase 1: Auth y CRUDs (Pruebas de Integración)', () => {
       productoId = res.body._id
     })
 
+    it('Retorna 400 si imagenUrl de producto no es http(s)', async () => {
+      const res = await request(app)
+        .post('/api/productos')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          sku: 'SKU-URL-INVALIDA',
+          nombre: 'Producto con URL inválida',
+          precio: 10,
+          stock: 1,
+          categoria: 'ropa',
+          proveedorId,
+          imagenUrl: 'ftp://cdn.demo.com/producto.jpg',
+        })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error.codigo).toBe('ERROR_VALIDACION')
+    })
+
     it('Retorna 409 tipado al intentar crear producto con SKU duplicado', async () => {
       const res = await request(app)
         .post('/api/productos')
@@ -206,6 +251,16 @@ describe('Fase 1: Auth y CRUDs (Pruebas de Integración)', () => {
 
       expect(res.status).toBe(409)
       expect(res.body.error.codigo).toBe('SKU_DUPLICADO')
+    })
+
+    it('Filtrar productos por slug de proveedor inexistente devuelve lista vacía', async () => {
+      const res = await request(app)
+        .get('/api/productos?proveedor=proveedor-inexistente')
+        .set('Authorization', `Bearer ${adminToken}`)
+
+      expect(res.status).toBe(200)
+      expect(res.body.data).toHaveLength(0)
+      expect(res.body.total).toBe(0)
     })
   })
 

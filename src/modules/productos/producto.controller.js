@@ -2,13 +2,16 @@ const productoService = require('./producto.service')
 
 async function listar(req, res, next) {
   try {
-    const { page = 1, limit = 20, categoria, proveedor, disponible } = req.query
+    const { page = 1, limit = 20, categoria, proveedor, disponible, search, sortBy, descending } = req.query
     const resultado = await productoService.listar({
       page: Number(page),
       limit: Math.min(Number(limit), 100),
       categoria,
       proveedor,
       disponible,
+      search,
+      sortBy,
+      descending,
     })
     res.status(200).json(resultado)
   } catch (err) {

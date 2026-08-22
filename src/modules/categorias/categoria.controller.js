@@ -27,4 +27,13 @@ async function actualizar(req, res, next) {
   }
 }
 
-module.exports = { listar, obtenerPorSlug, actualizar }
+async function eliminar(req, res, next) {
+  try {
+    await categoriaService.eliminar(req.params.id)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { listar, obtenerPorSlug, actualizar, eliminar }

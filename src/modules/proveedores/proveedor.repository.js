@@ -21,6 +21,18 @@ async function findByNombreOSlug({ nombre, slug }) {
   return Proveedor.findOne({ $or: [{ nombre }, { slug }] })
 }
 
+async function findDuplicadoParaUpdate(id, { nombre, slug }) {
+  const condiciones = []
+  if (nombre) condiciones.push({ nombre })
+  if (slug) condiciones.push({ slug })
+  if (condiciones.length === 0) return null
+
+  return Proveedor.findOne({
+    _id: { $ne: id },
+    $or: condiciones,
+  })
+}
+
 async function crear(datos) {
   return Proveedor.create(datos)
 }
@@ -33,4 +45,12 @@ async function deleteById(id) {
   return Proveedor.findByIdAndDelete(id)
 }
 
-module.exports = { findAll, findById, findByNombreOSlug, crear, updateById, deleteById }
+module.exports = {
+  findAll,
+  findById,
+  findByNombreOSlug,
+  findDuplicadoParaUpdate,
+  crear,
+  updateById,
+  deleteById,
+}

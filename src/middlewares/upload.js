@@ -1,11 +1,17 @@
 const multer = require('multer')
 const path = require('path')
+const fs = require('fs')
 const { MAX_FILE_SIZE_MB } = require('../config/env')
 const AppError = require('../errors/AppError')
 
+const uploadDir = 'uploads/'
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/')
+    cb(null, uploadDir)
   },
   filename: (req, file, cb) => {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`

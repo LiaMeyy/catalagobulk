@@ -14,7 +14,14 @@ const productoSchema = new mongoose.Schema(
     },
     categoria: { type: String, required: true, minlength: 1, index: true },
     descripcion: { type: String, default: null },
-    imagenUrl: { type: String, default: null },
+    imagenUrl: {
+      type: String,
+      default: null,
+      validate: {
+        validator: (v) => v === null || /^https?:\/\/.+/.test(v),
+        message: 'URL de imagen inválida',
+      },
+    },
     proveedorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Proveedor',

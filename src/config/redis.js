@@ -2,6 +2,7 @@ const { createClient } = require('redis')
 const { REDIS_HOST, REDIS_PORT } = require('./env')
 
 const redisClient = createClient({
+  RESP: 2,
   socket: {
     host: REDIS_HOST,
     port: REDIS_PORT,

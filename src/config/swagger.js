@@ -394,7 +394,7 @@ const swaggerDocument = {
       put: {
         tags: ['Categorías'],
         summary: 'Actualizar categoría',
-        description: 'Solo admin. El slug no se edita.',
+        description: 'Solo admin. El slug no se edita (se usa :id en path, no slug).',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
@@ -412,6 +412,14 @@ const swaggerDocument = {
           },
         },
         responses: { 200: { description: 'Actualizada' }, 403: { description: 'Solo admin' }, 404: { description: 'No existe' } },
+      },
+      delete: {
+        tags: ['Categorías'],
+        summary: 'Eliminar categoría (opcional)',
+        description: 'Solo admin. No borra productos que la referencian.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 204: { description: 'Eliminada' }, 403: { description: 'Solo admin' }, 404: { description: 'No existe' } },
       },
     },
 

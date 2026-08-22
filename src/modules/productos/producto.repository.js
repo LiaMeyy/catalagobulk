@@ -1,10 +1,20 @@
 const Producto = require('./producto.model')
 const Proveedor = require('../proveedores/proveedor.model')
 
-async function findAll({ page = 1, limit = 20, categoria, proveedor, disponible }) {
+async function findAll({
+  page = 1,
+  limit = 20,
+  categoria,
+  proveedor,
+  disponible,
+  search,
+  sortBy = 'nombre',
+  descending = 'false',
+}) {
   const filtro = {}
 
   if (categoria) filtro.categoria = categoria
+  if (search) filtro.nombre = { $regex: search, $options: 'i' }
 
   if (proveedor) {
     // puede ser slug o id
@@ -12,6 +22,7 @@ async function findAll({ page = 1, limit = 20, categoria, proveedor, disponible 
       filtro.proveedorId = proveedor
     } else {
       const prov = await Proveedor.findOne({ slug: proveedor })
+      if (!prov) return { data: [], page, limit, total: 0 }
       if (prov) filtro.proveedorId = prov._id
     }
   }
@@ -19,8 +30,12 @@ async function findAll({ page = 1, limit = 20, categoria, proveedor, disponible 
   if (disponible !== undefined) filtro.disponible = disponible === 'true'
 
   const skip = (page - 1) * limit
+  const camposOrdenables = new Set(['nombre', 'precio', 'stock', 'createdAt'])
+  const campoOrden = camposOrdenables.has(sortBy) ? sortBy : 'nombre'
+  const orden = descending === true || descending === 'true' ? -1 : 1
+
   const [data, total] = await Promise.all([
-    Producto.find(filtro).skip(skip).limit(limit),
+    Producto.find(filtro).sort({ [campoOrden]: orden }).skip(skip).limit(limit),
     Producto.countDocuments(filtro),
   ])
 
