@@ -6,6 +6,10 @@ async function listar({ page, limit, categoria, proveedor, disponible, search, s
   return productoRepository.findAll({ page, limit, categoria, proveedor, disponible, search, sortBy, descending })
 }
 
+async function listarPublico({ page, limit, categoria, proveedor, search, sortBy, descending }) {
+  return productoRepository.findAll({ page, limit, categoria, proveedor, disponible: true, search, sortBy, descending })
+}
+
 async function obtenerPorId(id) {
   const producto = await productoRepository.findById(id)
   if (!producto) throw new AppError('Producto no encontrado', 404, 'PRODUCTO_NOT_FOUND')
@@ -14,6 +18,10 @@ async function obtenerPorId(id) {
 
 async function obtenerStats() {
   return productoRepository.stats()
+}
+
+async function obtenerStatsPublico() {
+  return productoRepository.statsPublico()
 }
 
 async function crear(datos) {
@@ -46,4 +54,4 @@ async function eliminar(id) {
   if (!producto) throw new AppError('Producto no encontrado', 404, 'PRODUCTO_NOT_FOUND')
 }
 
-module.exports = { listar, obtenerPorId, obtenerStats, crear, actualizar, eliminar }
+module.exports = { listar, listarPublico, obtenerPorId, obtenerStats, obtenerStatsPublico, crear, actualizar, eliminar }

@@ -19,6 +19,25 @@ async function listar(req, res, next) {
   }
 }
 
+async function listarPublico(req, res, next) {
+  try {
+    const { page = 1, limit = 20, categoria, proveedor, search, sortBy, descending } = req.query
+    const resultado = await productoService.listar({
+      page: Number(page),
+      limit: Math.min(Number(limit), 100),
+      categoria,
+      proveedor,
+      disponible: true,
+      search,
+      sortBy,
+      descending,
+    })
+    res.status(200).json(resultado)
+  } catch (err) {
+    next(err)
+  }
+}
+
 async function obtenerPorId(req, res, next) {
   try {
     const producto = await productoService.obtenerPorId(req.params.id)
@@ -31,6 +50,15 @@ async function obtenerPorId(req, res, next) {
 async function obtenerStats(req, res, next) {
   try {
     const stats = await productoService.obtenerStats()
+    res.status(200).json(stats)
+  } catch (err) {
+    next(err)
+  }
+}
+
+async function obtenerStatsPublico(req, res, next) {
+  try {
+    const stats = await productoService.obtenerStatsPublico()
     res.status(200).json(stats)
   } catch (err) {
     next(err)
@@ -64,4 +92,4 @@ async function eliminar(req, res, next) {
   }
 }
 
-module.exports = { listar, obtenerPorId, obtenerStats, crear, actualizar, eliminar }
+module.exports = { listar, listarPublico, obtenerPorId, obtenerStats, obtenerStatsPublico, crear, actualizar, eliminar }

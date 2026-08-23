@@ -80,8 +80,30 @@ async function stats() {
   }
 }
 
+async function statsPublico() {
+  const [totalProductos, precioPromedio, porCategoria] = await Promise.all([
+    Producto.countDocuments({ disponible: true }),
+    Producto.aggregate([
+      { $match: { disponible: true } },
+      { $group: { _id: null, avg: { $avg: '$precio' } } }
+    ]),
+    Producto.aggregate([
+      { $match: { disponible: true } },
+      { $group: { _id: '$categoria', count: { $sum: 1 } } },
+      { $project: { _id: 0, categoria: '$_id', count: 1 } },
+      { $sort: { count: -1 } },
+    ]),
+  ])
+
+  return {
+    totalProductos,
+    precioPromedio: precioPromedio[0] ? Math.round(precioPromedio[0].avg * 100) / 100 : 0,
+    porCategoria,
+  }
+}
+
 async function countByProveedor(proveedorId) {
   return Producto.countDocuments({ proveedorId })
 }
 
-module.exports = { findAll, findById, findBySku, crear, updateById, deleteById, stats, countByProveedor }
+module.exports = { findAll, findById, findBySku, crear, updateById, deleteById, stats, statsPublico, countByProveedor }

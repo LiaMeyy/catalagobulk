@@ -5,11 +5,11 @@ const rol = require('../../middlewares/rol')
 
 const router = Router()
 
-// GET /api/proveedores — autenticado
-router.get('/', auth, proveedorController.listar)
+// GET /api/proveedores — PÚBLICO (filtros del catálogo)
+router.get('/', proveedorController.listar)
 
-// GET /api/proveedores/:id — autenticado
-router.get('/:id', auth, proveedorController.obtenerPorId)
+// GET /api/proveedores/:id — PÚBLICO
+router.get('/:id', proveedorController.obtenerPorId)
 
 // POST /api/proveedores — solo admin
 router.post('/', auth, rol('admin'), proveedorController.crear)

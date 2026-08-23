@@ -5,16 +5,16 @@ const rol = require('../../middlewares/rol')
 
 const router = Router()
 
-// GET /api/categorias — autenticado
-router.get('/', auth, categoriaController.listar)
+// GET /api/categorias — PÚBLICO (filtros del catálogo)
+router.get('/', categoriaController.listar)
 
-// GET /api/categorias/:slug — autenticado
-router.get('/:slug', auth, categoriaController.obtenerPorSlug)
+// GET /api/categorias/:slug — PÚBLICO
+router.get('/:slug', categoriaController.obtenerPorSlug)
 
-// PUT /api/categorias/:id — solo admin (slug no se edita)
+// PUT /api/categorias/:id — solo admin
 router.put('/:id', auth, rol('admin'), categoriaController.actualizar)
 
-// DELETE /api/categorias/:id — solo admin (opcional)
+// DELETE /api/categorias/:id — solo admin
 router.delete('/:id', auth, rol('admin'), categoriaController.eliminar)
 
 module.exports = router

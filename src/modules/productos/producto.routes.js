@@ -5,13 +5,13 @@ const rol = require('../../middlewares/rol')
 
 const router = Router()
 
-// GET /api/productos/stats — autenticado (antes de /:id para no colisionar)
+// PÚBLICO — Catálogo e-commerce (sin autenticación)
+router.get('/public/stats', productoController.obtenerStatsPublico)
+router.get('/public', productoController.listarPublico)
+
+// PRIVADO — Panel admin (autenticado)
 router.get('/stats', auth, productoController.obtenerStats)
-
-// GET /api/productos — autenticado
 router.get('/', auth, productoController.listar)
-
-// GET /api/productos/:id — autenticado
 router.get('/:id', auth, productoController.obtenerPorId)
 
 // POST /api/productos — solo admin
