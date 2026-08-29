@@ -27,7 +27,7 @@ async function findAll({
     }
   }
 
-  if (disponible !== undefined) filtro.disponible = disponible === 'true'
+  if (disponible !== undefined) filtro.disponible = disponible === true || disponible === 'true'
 
   const skip = (page - 1) * limit
   const camposOrdenables = new Set(['nombre', 'precio', 'stock', 'createdAt'])
