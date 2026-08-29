@@ -53,7 +53,7 @@ class AuthController {
       }
 
       const token = jwt.sign(
-        { sub: usuario._id, rol: usuario.rol },
+        { sub: usuario._id, role: usuario.rol },
         env.JWT_SECRET,
         { expiresIn: env.JWT_EXPIRES_IN }
       );

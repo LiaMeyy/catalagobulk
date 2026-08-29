@@ -1,117 +1,94 @@
-// import.controller.js
-import path from 'path';
-import ImportJob from './importJob.model.js';
-import Proveedor from '../proveedores/proveedor.model.js';
-import importQueue from '../../queues/import.queue.js'; // asume que ya tenés la cola de BullMQ armada
+import fs from 'fs';
+import AppError from '../../errors/AppError.js';
+import { crearImport, obtenerImport, listarImports, procesarImport } from './import.service.js';
 
-class ImportController {
-  async create(req, res, next) {
-    try {
-      const { proveedorId } = req.body;
+function calcularPorcentaje(job) {
+  if (!job.total) return 0;
+  return Math.round((job.procesados / job.total) * 100);
+}
 
-      if (!req.file) {
-        return res.status(400).json({ message: 'Falta el archivo' });
-      }
+function serializarJob(job) {
+  return {
+    importJobId: job._id,
+    proveedorId: job.proveedorId,
+    estado: job.estado,
+    total: job.total,
+    procesados: job.procesados,
+    exitosos: job.exitosos,
+    fallidos: job.fallidos,
+    porcentaje: calcularPorcentaje(job),
+    errores: job.errores,
+    startedAt: job.startedAt,
+    finishedAt: job.finishedAt,
+  };
+}
 
-      if (!proveedorId) {
-        return res.status(400).json({ message: 'Falta proveedorId' });
-      }
-
-      const extension = path.extname(req.file.originalname).toLowerCase();
-      if (extension !== '.csv' && extension !== '.json') {
-        return res.status(400).json({ message: 'Extensión de archivo inválida (solo .csv o .json)' });
-      }
-
-      const proveedor = await Proveedor.findById(proveedorId);
-      if (!proveedor) {
-        return res.status(404).json({ message: 'proveedorId no existe' });
-      }
-
-      if (!proveedor.activo) {
-        return res.status(409).json({ message: 'El proveedor está inactivo, no puede recibir importaciones' });
-      }
-
-      const importJob = await ImportJob.create({
-        usuarioId: req.usuario.id, // viene del middleware de auth (req.usuario = { id, rol })
-        proveedorId,
-        archivoNombre: req.file.originalname,
-        archivoRuta: req.file.path,
-        estado: 'pending',
-      });
-
-      // encola el job para que el worker lo procese en segundo plano
-      const job = await importQueue.add('procesar-import', {
-        importJobId: importJob._id.toString(),
-      });
-
-      importJob.bullJobId = job.id;
-      await importJob.save();
-
-      return res.status(202).json({
-        importJobId: importJob._id,
-        estado: importJob.estado,
-      });
-    } catch (error) {
-      return next(error);
+export async function subirImport(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new AppError('Falta el archivo (campo "archivo")', 400, 'ARCHIVO_REQUERIDO');
     }
-  }
 
-  async getById(req, res, next) {
-    try {
-      const { id } = req.params;
-      const importJob = await ImportJob.findById(id);
-
-      if (!importJob) {
-        return res.status(404).json({ message: 'Import job no encontrado' });
-      }
-
-      // solo el dueño del import o un admin puede consultarlo
-      const esDueño = importJob.usuarioId.toString() === req.usuario.id;
-      const esAdmin = req.usuario.rol === 'admin';
-      if (!esDueño && !esAdmin) {
-        return res.status(403).json({ message: 'No tenés permiso para ver este import' });
-      }
-
-      const porcentaje = importJob.total
-        ? Math.round((importJob.procesados / importJob.total) * 100)
-        : 0;
-
-      return res.status(200).json({
-        importJobId: importJob._id,
-        proveedorId: importJob.proveedorId,
-        estado: importJob.estado,
-        total: importJob.total,
-        procesados: importJob.procesados,
-        exitosos: importJob.exitosos,
-        fallidos: importJob.fallidos,
-        porcentaje,
-        errores: importJob.errores,
-        startedAt: importJob.startedAt,
-        finishedAt: importJob.finishedAt,
-      });
-    } catch (error) {
-      return next(error);
+    const { proveedorId } = req.body;
+    if (!proveedorId) {
+      // Limpiamos el archivo que Multer ya guardo, no sirve de nada.
+      fs.unlink(req.file.path, () => {});
+      throw new AppError('Falta proveedorId', 400, 'PROVEEDOR_ID_REQUERIDO');
     }
-  }
 
-  async list(req, res, next) {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const job = await crearImport({
+      usuarioId: req.user.sub,
+      proveedorId,
+      archivoNombre: req.file.originalname,
+      archivoRuta: req.file.path,
+    });
 
-      const [importJobs, total] = await Promise.all([
-        ImportJob.find()
-          .skip((page - 1) * limit)
-          .limit(limit)
-          .sort({ createdAt: -1 }),
-        ImportJob.countDocuments(),
-      ]);
+    // Sin Redis/BullMQ todavia: procesamos en segundo plano dentro del
+    // mismo proceso Node, sin bloquear la respuesta. `procesarImport` no
+    // se espera (no `await`) para que el POST responda de inmediato.
+    // Cuando agregues Redis, esto se reemplaza por encolarImport(job._id)
+    // y un worker aparte (ver queues/import.queue.js y workers/import.worker.js,
+    // ya estan escritos y listos para cuando quieras dar el salto).
+    procesarImport(job._id.toString()).catch((error) => {
+      console.error(`[import ${job._id}] fallo procesando en segundo plano:`, error.message);
+    });
 
-      return res.status(200).json({ data: importJobs, page, limit, total });
-    } catch (error) {
-      return next(error);
+    res.status(202).json({ importJobId: job._id, estado: 'pending' });
+  } catch (error) {
+    if (req.file) {
+      fs.unlink(req.file.path, () => {});
     }
+    next(error);
   }
 }
 
-export default new ImportController();
+export async function obtenerEstadoImport(req, res, next) {
+  try {
+    const job = await obtenerImport(req.params.id);
+
+    const esDueño = job.usuarioId.toString() === req.user.sub;
+    if (!esDueño && req.user.role !== 'admin') {
+      throw new AppError('No autorizado para ver este import', 403, 'NO_AUTORIZADO');
+    }
+
+    res.json(serializarJob(job));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function listarImportsController(req, res, next) {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const { data, total } = await listarImports({ page, limit });
+
+    res.json({
+      data: data.map(serializarJob),
+      page: Number(page),
+      limit: Number(limit),
+      total,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
