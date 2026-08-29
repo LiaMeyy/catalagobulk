@@ -81,9 +81,8 @@ const productoSchema = new mongoose.Schema(
   }
 );
 
-productoSchema.pre('save', function (next) {
+productoSchema.pre('save', function () {
   this.disponible = this.stock > 0;
-  next();
 });
 
 export default mongoose.model('Producto', productoSchema, 'productos');
