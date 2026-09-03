@@ -10,6 +10,7 @@ import categoriaRoutes from './modules/categorias/categoria.routes.js';
 import productoRoutes from './modules/productos/producto.routes.js';
 import proveedorRoutes from './modules/proveedores/proveedor.routes.js';
 import usuarioRoutes from './modules/usuarios/usuario.routes.js';
+import importRoutes from './modules/imports/import.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,7 +33,7 @@ app.use('/api/categorias', categoriaRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/usuarios', usuarioRoutes);
-// app.use('/api/imports', importRoutes); // TODO: activar cuando llegue la fase de BullMQ
+app.use('/api/imports', importRoutes);
 
 app.use(errorHandler);
 
