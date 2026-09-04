@@ -54,7 +54,7 @@ Levanta 4 servicios: `mongo`, `redis`, `api` y `worker` (este último es un proc
 
 El token lleva el payload `{ sub: <usuarioId>, rol }` y expira según `JWT_EXPIRES_IN` (`1h` por defecto en `.env`).
 
-> **Regla de auth actual:** `imports`, `productos`, `proveedores`, `categorias` y `usuarios` exigen autenticación. En `productos`/`proveedores`/`categorias` los `GET` requieren `auth` de cualquier rol y las escrituras `auth` + `rol('admin')`. En `imports` y `usuarios`, **todos** los endpoints requieren `auth` + `rol('admin')`.
+> **Regla de auth actual:** `imports` y `usuarios` exigen autenticación en **todos** sus endpoints (`auth` + `rol('admin')`, salvo `GET /api/imports/:id` que admite dueño o admin). En `productos`/`proveedores`/`categorias` los `GET` son **públicos** (catálogo sin login, con filtro `activo:true` por default) y las escrituras (`POST`/`PUT`/`DELETE`) exigen `auth` + `rol('admin')`.
 
 ---
 
@@ -73,9 +73,9 @@ Agrupados por módulo. El prefijo de cada grupo está definido en `src/app.js` (
 
 | Método | Path | Rol | Nota |
 |---|---|---|---|
-| GET | `/api/productos` | auth | Query: `page`, `limit` (max 100), `categoria`, `disponible`, `proveedor` (id o slug), `activo` (default `true`) |
-| GET | `/api/productos/stats` | auth | `{ totalProductos, precioPromedio, porCategoria[] }` |
-| GET | `/api/productos/:id` | auth | |
+| GET | `/api/productos` | público | Query: `page`, `limit` (max 100), `categoria`, `disponible`, `proveedor` (id o slug), `activo` (default `true`) |
+| GET | `/api/productos/stats` | público | `{ totalProductos, precioPromedio, porCategoria[] }` |
+| GET | `/api/productos/:id` | público | |
 | POST | `/api/productos` | auth + admin | Crea producto; `disponible` se calcula solo |
 | PUT | `/api/productos/:id` | auth + admin | |
 | DELETE | `/api/productos/:id` | auth + admin | Borrado lógico (`activo:false`). 200 |
@@ -84,8 +84,8 @@ Agrupados por módulo. El prefijo de cada grupo está definido en `src/app.js` (
 
 | Método | Path | Rol | Nota |
 |---|---|---|---|
-| GET | `/api/proveedores` | auth | Query: `page`, `limit`, `activo` (default `true`) |
-| GET | `/api/proveedores/:id` | auth | |
+| GET | `/api/proveedores` | público | Query: `page`, `limit`, `activo` (default `true`) |
+| GET | `/api/proveedores/:id` | público | |
 | POST | `/api/proveedores` | auth + admin | 409 si `nombre`/`slug` ya existe |
 | PUT | `/api/proveedores/:id` | auth + admin | |
 | DELETE | `/api/proveedores/:id` | auth + admin | Borrado lógico (`activo:false`). 200 |
@@ -94,8 +94,8 @@ Agrupados por módulo. El prefijo de cada grupo está definido en `src/app.js` (
 
 | Método | Path | Rol | Nota |
 |---|---|---|---|
-| GET | `/api/categorias` | auth | `{ message, data: [...] }` (default `activo:true`) |
-| GET | `/api/categorias/:slug` | auth | Por slug, no por id |
+| GET | `/api/categorias` | público | `{ message, data: [...] }` (default `activo:true`) |
+| GET | `/api/categorias/:slug` | público | Por slug, no por id |
 | PUT | `/api/categorias/:id` | auth + admin | Solo `nombre`, `descripcion`, `imagenUrl`; el `slug` NO se edita |
 | DELETE | `/api/categorias/:id` | auth + admin | Borrado lógico (`activo:false`). 200 |
 

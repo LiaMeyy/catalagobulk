@@ -70,7 +70,8 @@ El flujo completo de importación está conectado de punta a punta:
 
 - **Persistir advertencias** — `importJob.model.js` ya expone `advertencias: [errorItemSchema]` (default `[]`); `import.repository.js` las persiste con `$push` + `$slice` respetando `IMPORT_ERRORS_CAP`, y `import.service.js` las acumula y flushea junto con el progreso.
 - **Borrado lógico (soft delete)** — `productos`, `proveedores` y `categorias` ya no borran el documento: el `DELETE` hace `activo: false` (responde 200 + doc). `producto.model.js` y `categoria.model.js` ganaron el campo `activo` (default `true`); `proveedor` ya lo tenía. En proveedor se quitó el bloqueo de "no se puede eliminar si tiene productos".
-- **Auth + rol en rutas** — `productos`, `proveedores` y `categorias` ahora aplican `auth` (GET) y `auth + rol('admin')` (POST/PUT/DELETE), mismo patrón que `imports`. Se agregó `DELETE /api/categorias/:id`.
+- **Auth + rol en rutas** — `productos`, `proveedores` y `categorias` ahora aplican `auth + rol('admin')` en POST/PUT/DELETE, mismo patrón que `imports`. Se agregó `DELETE /api/categorias/:id`.
+- **GET públicos (catálogo sin login)** — los `GET` de `productos` (`/`, `/stats`, `/:id`), `proveedores` (`/`, `/:id`) y `categorias` (`/`, `/:slug`) se quitaron de `auth` y vuelven a ser públicos, para que el frontend muestre el catálogo sin token. Las escrituras (`POST`/`PUT`/`DELETE`) siguen exigiendo `auth + rol('admin')`.
 - **Módulo usuarios protegido y con borrado real** — `usuario.routes.js` aplica `auth + rol('admin')` en todos sus endpoints; se agregó `DELETE /api/usuarios/:id` (borrado **real** con `findByIdAndDelete`, coexistiendo con `changeStatus` para desactivar).
 - **Limpieza de logs de debug** — se eliminaron los `console.log` de diagnóstico en `import.controller.js`.
 - **Filtro `activo` por default** — los listados (`GET /productos`, `/categorias`, `/proveedores`) devuelven solo `activo:true` salvo que se pase `?activo=false`.
