@@ -1,0 +1,30 @@
+# Render Blueprint para el backend CatálogoBulk
+# Documentación: https://render.com/docs/blueprint-spec
+#
+# Nota: MONGO_URI, JWT_SECRET, REDIS_HOST y REDIS_PORT NO se declaran aquí
+# porque dependen de tu MongoDB (Atlas) y del Redis creado por este mismo
+# blueprint. Los agregas en el Dashboard al terminar (ver instrucciones).
+
+services:
+  - type: web
+    name: catalogobulk-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: JWT_EXPIRES_IN
+        value: "1h"
+      - key: MAX_FILE_SIZE_MB
+        value: "50"
+      - key: BATCH_SIZE
+        value: "500"
+      - key: CACHE_TTL_SECONDS
+        value: "300"
+      - key: IMPORT_ERRORS_CAP
+        value: "1000"
+
+databases:
+  - name: catalogobulk-redis
+    type: redis
