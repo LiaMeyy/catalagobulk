@@ -2,12 +2,12 @@ require('dotenv').config()
 require('../config/env')
 
 const { Worker } = require('bullmq')
-const { createClient } = require('redis')
 const mongoose = require('mongoose')
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
 const { REDIS_URL, REDIS_HOST, REDIS_PORT, MONGO_URI, BATCH_SIZE, IMPORT_ERRORS_CAP } = require('../config/env')
+const { crearConexionBullMQ } = require('../config/bullConnection')
 const ImportJob = require('../modules/imports/importJob.model')
 const Producto = require('../modules/productos/producto.model')
 const Categoria = require('../modules/categorias/categoria.model')
@@ -100,9 +100,7 @@ async function* leerJSON(ruta) {
 }
 
 // ── Procesar job ─────────────────────────────────────────────────────────────
-async function procesarImport(job) {
-  const { importJobId, archivoRuta, proveedorId } = job.data
-
+async function procesarImportJob({ importJobId, archivoRuta, proveedorId }) {
   // Transición atómica: solo si está en 'pending' pasa a 'processing'
   const jobActualizado = await ImportJob.findOneAndUpdate(
     { _id: importJobId, estado: 'pending' },
@@ -193,7 +191,6 @@ async function procesarImport(job) {
 
         // Reportar progreso
         await ImportJob.findByIdAndUpdate(importJobId, { procesados, exitosos, fallidos, errores })
-        await job.updateProgress({ importJobId, procesados, exitosos, fallidos })
       }
     }
 
@@ -265,30 +262,15 @@ async function insertarLote(lote, filasEnLote, errores, fallidos, cap) {
 }
 
 // ── Arrancar worker ──────────────────────────────────────────────────────────
-function crearClienteWorker() {
-  const base = {
-    RESP: 2,
-    socket: { reconnectStrategy: (retries) => Math.min(retries * 100, 3000) },
-  }
-  return createClient(
-    REDIS_URL
-      ? { ...base, url: REDIS_URL }
-      : { ...base, socket: { ...base.socket, host: REDIS_HOST, port: REDIS_PORT } }
-  )
-}
-
 async function start() {
   await mongoose.connect(MONGO_URI)
   console.log('✓ Worker: MongoDB conectado')
 
-  // Conexión dedicada para el Worker (no se comparte con Queue/QueueEvents,
-  // lo que evita conflictos cuando corre dentro del proceso de la API).
-  const clienteWorker = crearClienteWorker()
-  clienteWorker.on('error', (err) => console.error('✗ Worker Redis error:', err.message))
-  await clienteWorker.connect()
+  // Conexión ioredis dedicada para el Worker (requisito de BullMQ).
+  const clienteWorker = crearConexionBullMQ()
   console.log('✓ Worker: Redis conectado')
 
-  const worker = new Worker('import', procesarImport, {
+  const worker = new Worker('import', (job) => procesarImportJob(job.data), {
     connection: clienteWorker,
     concurrency: 1,
   })
@@ -308,4 +290,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { start }
+module.exports = { start, procesarImportJob }

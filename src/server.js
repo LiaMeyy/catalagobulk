@@ -22,8 +22,8 @@ async function start() {
       console.log(`  Health: http://localhost:${PORT}/health`)
     })
 
-    // Worker de BullMQ en el mismo proceso para no pagar un Background
-    // Worker aparte en Render (free tier).
+    // Worker de BullMQ (cola asíncrona) en el mismo proceso, porque en el
+    // free tier de Render no hay Background Workers sin pagar.
     await iniciarWorker()
   } catch (err) {
     console.error('Error al arrancar:', err.message)

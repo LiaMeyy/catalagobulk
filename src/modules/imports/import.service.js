@@ -18,7 +18,7 @@ async function crearImport({ archivo, proveedorId, usuarioId }) {
     estado: 'pending',
   })
 
-  // Encolar en BullMQ
+  // Encolar en BullMQ (procesamiento asíncrono, requisito del proyecto).
   const bullJob = await importQueue.add('procesar-import', {
     importJobId: importJob._id.toString(),
     archivoRuta: archivo.path,

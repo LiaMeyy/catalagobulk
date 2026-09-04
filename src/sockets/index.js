@@ -1,6 +1,6 @@
 const { Server } = require('socket.io')
 const { QueueEvents } = require('bullmq')
-const { redisClient } = require('../config/redis')
+const { crearConexionBullMQ } = require('../config/bullConnection')
 
 function inicializarSockets(httpServer) {
   const io = new Server(httpServer, {
@@ -8,7 +8,7 @@ function inicializarSockets(httpServer) {
   })
 
   const queueEvents = new QueueEvents('import', {
-    connection: redisClient,
+    connection: crearConexionBullMQ(),
   })
 
   // Relay de eventos BullMQ → Socket.io
