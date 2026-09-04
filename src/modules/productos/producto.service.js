@@ -1,6 +1,36 @@
 const productoRepository = require('./producto.repository')
 const Proveedor = require('../proveedores/proveedor.model')
+const Categoria = require('../categorias/categoria.model')
 const AppError = require('../../errors/AppError')
+
+// Normaliza el nombre de categoria igual que el import worker (slug en
+// minusculas) para que el mismo concepto no genere categorias distintas.
+function normalizarCategoria(valor) {
+  return String(valor ?? '').trim().toLowerCase()
+}
+
+// Crea la categoria si no existe (misma logica que import.worker.js).
+async function asegurarCategoria(valor) {
+  const slug = normalizarCategoria(valor)
+  if (!slug) return
+
+  await Categoria.bulkWrite([
+    {
+      updateOne: {
+        filter: { slug },
+        update: {
+          $setOnInsert: {
+            slug,
+            nombre: slug.charAt(0).toUpperCase() + slug.slice(1),
+            descripcion: null,
+            imagenUrl: null,
+          },
+        },
+        upsert: true,
+      },
+    },
+  ])
+}
 
 async function listar({ page, limit, categoria, proveedor, disponible, search, sortBy, descending }) {
   return productoRepository.findAll({ page, limit, categoria, proveedor, disponible, search, sortBy, descending })
@@ -33,7 +63,10 @@ async function crear(datos) {
   const proveedor = await Proveedor.findById(proveedorId)
   if (!proveedor) throw new AppError('Proveedor no encontrado', 404, 'PROVEEDOR_NOT_FOUND')
 
-  return productoRepository.crear(datos)
+  const categoria = normalizarCategoria(datos.categoria)
+  await asegurarCategoria(categoria)
+
+  return productoRepository.crear({ ...datos, categoria })
 }
 
 async function actualizar(id, datos) {
@@ -42,6 +75,12 @@ async function actualizar(id, datos) {
     if (existente && existente._id.toString() !== id) {
       throw new AppError('SKU duplicado', 409, 'SKU_DUPLICADO')
     }
+  }
+
+  if (datos.categoria !== undefined) {
+    const categoria = normalizarCategoria(datos.categoria)
+    await asegurarCategoria(categoria)
+    datos.categoria = categoria
   }
 
   const producto = await productoRepository.updateById(id, datos)
