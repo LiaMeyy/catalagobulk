@@ -1,10 +1,9 @@
 # Render Blueprint para el backend CatálogoBulk
 # Documentación: https://render.com/docs/blueprint-spec
 #
-# Redis se crea (databases) y su REDIS_URL se inyecta automáticamente en la
-# API. El backend ahora usa REDIS_URL (con TLS) gracias al fallback de
-# src/config/redis.js. MONGO_URI y JWT_SECRET dependen de tu MongoDB/Atlas,
-# puedes declararlos aquí abajo o agregarlos en el Dashboard.
+# NOTA: El bloque `databases` del blueprint no soporta `type: redis`, así que
+# el Redis se crea a mano en el Dashboard y su REDIS_URL se pega aquí como
+# variable (ver instrucciones). MONGO_URI y JWT_SECRET se configuran igual.
 
 services:
   - type: web
@@ -30,11 +29,4 @@ services:
       - key: IMPORT_ERRORS_CAP
         value: "1000"
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: catalogobulk-redis
-          envVarKey: REDIS_URL
-
-databases:
-  - name: catalogobulk-redis
-    type: redis
+        sync: false
