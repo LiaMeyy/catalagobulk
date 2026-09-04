@@ -8,7 +8,11 @@ class ProductoController {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-      const filtro = {};
+      const filtro = { activo: true };
+
+      if (req.query.activo !== undefined) {
+        filtro.activo = req.query.activo === 'true';
+      }
 
       if (req.query.categoria) {
         filtro.categoria = req.query.categoria;
@@ -145,11 +149,15 @@ class ProductoController {
   async remove(req, res, next) {
     try {
       const { id } = req.params;
-      const producto = await Producto.findByIdAndDelete(id);
+      const producto = await Producto.findByIdAndUpdate(
+        id,
+        { activo: false },
+        { new: true, runValidators: true }
+      );
       if (!producto) {
         return res.status(404).json({ message: 'Producto no encontrado' });
       }
-      return res.status(204).send();
+      return res.status(200).json({ message: `Producto ${id} desactivado`, data: producto });
     } catch (error) {
       return next(error);
     }

@@ -19,9 +19,9 @@ src/
     proveedores/   model, controller, service, repository, routes
     categorias/    model, controller, service, repository, routes
     imports/       importJob.model, controller, service, repository, routes
-  scripts/         generar-catalogo.js   (≥120.000 filas, TODO)
+  scripts/         generar-catalogo.js   (≥120.000 filas sucias, implementado)
   queues/          import.queue.js       (Queue de BullMQ)
-  workers/         import.worker.js      (Worker, proceso aparte — TODOs)
+  workers/         import.worker.js      (Worker, proceso aparte — implementado)
   sockets/         index.js              (Socket.io + TODO relay QueueEvents→socket)
   errors/          AppError.js
   app.js           (construye Express, sin listen)
@@ -53,16 +53,39 @@ Implementado dentro de `import.service.js`, `import.repository.js` e `import.con
 - **Progreso del ImportJob**: actualizaciones incrementales (`$inc` + `$push` con `$slice` respetando `IMPORT_ERRORS_CAP`); `completed`/`failed` al final.
 - **Conteo previo de `total`**: `contarFilasCSV` (csv-parser en modo descarte) y `contarFilasJSON` (por tokens), guardado al pasar a `processing` para el % en tiempo real.
 
-## 4. Pendiente (a continuación)
+## 4. Pipeline de importación (hecho)
 
-1. **Conectar el worker** — `workers/import.worker.js` debe llamar `ImportService.procesarImport(importJobId)` (hoy tiene TODOs).
-2. **Montar middlewares en rutas** — `import.routes.js` no aplica `upload.single('archivo')`, `auth` ni `rol`; el controller usa `req.file`/`req.user`.
-3. **Activar la ruta** — `app.js:35` tiene comentado `app.use('/api/imports', importRoutes)`.
-4. **Persistir advertencias** — `importJob.model.js` no tiene campo `advertencias` (hoy se cuentan en memoria y se devuelven en el resumen).
-5. **Sockets** — relay `QueueEvents` → Socket.io en `sockets/index.js` (TODO).
-6. **Script de datos** — implementar `scripts/generar-catalogo.js` (≥120.000 filas sucias).
-7. **Tests** — jest + supertest.
-8. **Docker** — docker-compose.yml (Mongo, Redis, API, worker).
-9. **Docs** — swagger-ui-express (ya instalado, sin configurar).
+El flujo completo de importación está conectado de punta a punta:
 
-Nota: el conteo CSV asume una fila = una fila lógica (usa csv-parser, así que tolera saltos de línea embebidos en campos entre comillas).
+- **Worker conectado** — `workers/import.worker.js` escucha la cola `import-bulk` de BullMQ, conecta su propia instancia de Mongo (`connectDB()`), hace ping a Redis, y por cada job llama `ImportService.procesarImport(importJobId)`. Los errores por job se loguean sin tumbar el proceso (evento `worker.on('failed')`).
+- **Middlewares en rutas** — `import.routes.js` aplica `auth`, `rol('admin')` y `upload.single('archivo')` según el contrato:
+  - `POST /api/imports` → `auth` + `rol('admin')` + `upload.single('archivo')`
+  - `GET /api/imports/:id` → `auth` (dueño o admin validado en controller)
+  - `GET /api/imports` → `auth` + `rol('admin')`
+- **Ruta activada** — `app.js` monta `app.use('/api/imports', importRoutes)`.
+- **Script de datos** — `scripts/generar-catalogo.js` genera 121.000 filas "sucias" determinísticas (sku vacío, nombre vacío, precio negativo, stock decimal/negativo/no numérico, categoria vacía, sku duplicado, imagenUrl inválida, espacios extra, minúsculas/mayúsculas, precio con >2 decimales, descripcion vacía, etc.).
+- **Docker** — `docker-compose.yml` define 4 servicios: mongo, redis, api y worker (proceso aparte con su propio `command`).
+
+## 5. Resuelto recientemente
+
+- **Persistir advertencias** — `importJob.model.js` ya expone `advertencias: [errorItemSchema]` (default `[]`); `import.repository.js` las persiste con `$push` + `$slice` respetando `IMPORT_ERRORS_CAP`, y `import.service.js` las acumula y flushea junto con el progreso.
+- **Borrado lógico (soft delete)** — `productos`, `proveedores` y `categorias` ya no borran el documento: el `DELETE` hace `activo: false` (responde 200 + doc). `producto.model.js` y `categoria.model.js` ganaron el campo `activo` (default `true`); `proveedor` ya lo tenía. En proveedor se quitó el bloqueo de "no se puede eliminar si tiene productos".
+- **Auth + rol en rutas** — `productos`, `proveedores` y `categorias` ahora aplican `auth + rol('admin')` en POST/PUT/DELETE, mismo patrón que `imports`. Se agregó `DELETE /api/categorias/:id`.
+- **GET públicos (catálogo sin login)** — los `GET` de `productos` (`/`, `/stats`, `/:id`), `proveedores` (`/`, `/:id`) y `categorias` (`/`, `/:slug`) se quitaron de `auth` y vuelven a ser públicos, para que el frontend muestre el catálogo sin token. Las escrituras (`POST`/`PUT`/`DELETE`) siguen exigiendo `auth + rol('admin')`.
+- **Módulo usuarios protegido y con borrado real** — `usuario.routes.js` aplica `auth + rol('admin')` en todos sus endpoints; se agregó `DELETE /api/usuarios/:id` (borrado **real** con `findByIdAndDelete`, coexistiendo con `changeStatus` para desactivar).
+- **Limpieza de logs de debug** — se eliminaron los `console.log` de diagnóstico en `import.controller.js`.
+- **Filtro `activo` por default** — los listados (`GET /productos`, `/categorias`, `/proveedores`) devuelven solo `activo:true` salvo que se pase `?activo=false`.
+- **Seguridad de passwords** — `usuario.controller.js` hashea el password en `create` y `update` (bcrypt); `auth.service.js` (`login`) ahora valida contra el hash y firma el JWT con el rol real; ninguna respuesta devuelve el campo `password`.
+- **Refactor de capas (imports)** — `import.repository.js` ya no importa el modelo `Proveedor` directo: `findProveedorById` delega en `proveedorRepository.findById`.
+
+## 6. Pendiente
+
+1. **Sockets** — relay `QueueEvents` → Socket.io en `sockets/index.js` (TODO: suscribir socket a room por importJobId + relay de progreso).
+2. **Tests** — jest + supertest (dependencias instaladas, sin tests escritos ni script `test` en `package.json`).
+3. **Docs** — swagger-ui-express (ya instalado, sin configurar en `app.js`).
+4. **Capa service/repository** — `producto/categoria/proveedor.service.js` son stubs; `usuario.service.js` y `usuario.repository.js` están vacíos. Los controllers de esos módulos tocan Mongoose directo.
+
+## 7. Notas
+
+- El conteo CSV asume una fila = una fila lógica (usa csv-parser, así que tolera saltos de línea embebidos en campos entre comillas).
+- `POST /api/imports` exige `multipart/form-data` (campo File `archivo` + campo texto `proveedorId`). Multer ignora en silencio cualquier request que no sea multipart (`if (!is(req, ['multipart'])) return next()`), por lo que un body `raw`/`binary`/`x-www-form-urlencoded` devuelve `400 "Falta el archivo"` aunque exista el campo `archivo`. En Postman/Thunder Client usar tipo *form-data* y confirmar que el campo archivo quede como *File* con un `filename` real.

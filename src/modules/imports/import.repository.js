@@ -2,7 +2,7 @@ import { env } from '../../config/env.js';
 import ImportJob from './importJob.model.js';
 import Producto from '../productos/producto.model.js';
 import Categoria from '../categorias/categoria.model.js';
-import Proveedor from '../proveedores/proveedor.model.js';
+import proveedorRepository from '../proveedores/proveedor.repository.js';
 
 // Único lugar del módulo imports que toca Mongoose/los modelos.
 // No conoce req/res.
@@ -27,7 +27,7 @@ class ImportRepository {
   }
 
   async findProveedorById(id) {
-    return Proveedor.findById(id);
+    return proveedorRepository.findById(id);
   }
 
   async setBullJobId(id, bullJobId) {
@@ -41,12 +41,19 @@ class ImportRepository {
     );
   }
 
-  // Incrementa contadores y agrega errores respetando el cap (IMPORT_ERRORS_CAP).
-  async actualizarProgreso(id, { procesados, exitosos, fallidos, errores }) {
+  // Incrementa contadores y agrega errores/advertencias respetando el cap (IMPORT_ERRORS_CAP).
+  async actualizarProgreso(id, { procesados, exitosos, fallidos, errores, advertencias }) {
     const update = { $inc: { procesados, exitosos, fallidos } };
     if (errores && errores.length) {
       update.$push = {
         errores: { $each: errores, $slice: -env.IMPORT_ERRORS_CAP },
+      };
+    }
+    if (advertencias && advertencias.length) {
+      update.$push = update.$push || {};
+      update.$push.advertencias = {
+        $each: advertencias,
+        $slice: -env.IMPORT_ERRORS_CAP,
       };
     }
     return ImportJob.updateOne({ _id: id }, update);

@@ -255,6 +255,7 @@ class ImportService {
     }
 
     const importJob = await importRepository.create({
+
       usuarioId,
       proveedorId,
       archivoNombre,
@@ -302,18 +303,19 @@ class ImportService {
 
     const vistos = new Set();
     const categorias = new Set();
-    const advertencias = [];
 
     let lote = [];
     let procesados = 0;
     let exitosos = 0;
     let fallidos = 0;
+    let advertencias = 0;
 
     // Deltas pendientes de persistir en el ImportJob.
     let dProcesados = 0;
     let dExitosos = 0;
     let dFallidos = 0;
     const erroresPendientes = [];
+    const advertenciasPendientes = [];
 
     const agregarError = (error) => {
       if (erroresPendientes.length < env.IMPORT_ERRORS_CAP) {
@@ -321,18 +323,28 @@ class ImportService {
       }
     };
 
+    const agregarAdvertencia = (advertencia) => {
+      if (advertenciasPendientes.length < env.IMPORT_ERRORS_CAP) {
+        advertenciasPendientes.push(advertencia);
+      }
+    };
+
     const flushProgreso = async () => {
-      if (!dProcesados && !erroresPendientes.length) return;
+      if (!dProcesados && !erroresPendientes.length && !advertenciasPendientes.length) {
+        return;
+      }
       await importRepository.actualizarProgreso(importJobId, {
         procesados: dProcesados,
         exitosos: dExitosos,
         fallidos: dFallidos,
         errores: erroresPendientes,
+        advertencias: advertenciasPendientes,
       });
       dProcesados = 0;
       dExitosos = 0;
       dFallidos = 0;
       erroresPendientes.length = 0;
+      advertenciasPendientes.length = 0;
     };
 
     const insertarLote = async () => {
@@ -394,7 +406,10 @@ class ImportService {
           dFallidos += 1;
           agregarError(resultado.error);
         } else {
-          if (resultado.advertencia) advertencias.push(resultado.advertencia);
+          if (resultado.advertencia) {
+            advertencias += 1;
+            agregarAdvertencia(resultado.advertencia);
+          }
 
           const producto = ImportService.normalizarFila(raw, importJob.proveedorId);
           categorias.add(producto.categoria);
@@ -429,7 +444,7 @@ class ImportService {
         procesados,
         exitosos,
         fallidos,
-        advertencias: advertencias.length,
+        advertencias,
       };
     } catch (error) {
       await importRepository.marcarFallido(importJobId, error.message);
