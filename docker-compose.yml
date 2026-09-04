@@ -5,8 +5,8 @@ services:
     volumes:
       - mongo-data:/data/db
     # Para acceder a Mongo desde el host (debug), descomentar:
-    # ports:
-    #   - "27017:27017"
+    ports:
+      - "27017:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 5s

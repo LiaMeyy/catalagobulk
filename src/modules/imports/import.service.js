@@ -255,6 +255,7 @@ class ImportService {
     }
 
     const importJob = await importRepository.create({
+
       usuarioId,
       proveedorId,
       archivoNombre,
