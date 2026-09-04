@@ -1,4 +1,8 @@
 function rolMiddleware(rolesPermitidos = []) {
+  const permitidos = Array.isArray(rolesPermitidos)
+    ? rolesPermitidos
+    : [rolesPermitidos];
+
   return (req, res, next) => {
     const user = req.user;
 
@@ -6,7 +10,7 @@ function rolMiddleware(rolesPermitidos = []) {
       return res.status(401).json({ message: 'Usuario no autenticado' });
     }
 
-    if (!rolesPermitidos.includes(user.role)) {
+    if (!permitidos.includes(user.rol)) {
       return res.status(403).json({ message: 'No tienes permisos para esta acción' });
     }
 

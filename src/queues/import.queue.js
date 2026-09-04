@@ -1,8 +1,11 @@
-import Queue from 'bull';
+import { Queue } from 'bullmq';
 import { env } from '../config/env.js';
 
 const importQueue = new Queue('import-bulk', {
-  redis: env.REDIS_URL,
+  connection: {
+    host: env.REDIS_HOST,
+    port: env.REDIS_PORT,
+  },
 });
 
 export default importQueue;
