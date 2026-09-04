@@ -2,12 +2,12 @@ require('dotenv').config()
 require('../config/env')
 
 const { Worker } = require('bullmq')
+const { createClient } = require('redis')
 const mongoose = require('mongoose')
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
-const { redisClient, conectarRedis } = require('../config/redis')
-const { MONGO_URI, BATCH_SIZE, IMPORT_ERRORS_CAP } = require('../config/env')
+const { REDIS_URL, REDIS_HOST, REDIS_PORT, MONGO_URI, BATCH_SIZE, IMPORT_ERRORS_CAP } = require('../config/env')
 const ImportJob = require('../modules/imports/importJob.model')
 const Producto = require('../modules/productos/producto.model')
 const Categoria = require('../modules/categorias/categoria.model')
@@ -265,15 +265,31 @@ async function insertarLote(lote, filasEnLote, errores, fallidos, cap) {
 }
 
 // ── Arrancar worker ──────────────────────────────────────────────────────────
+function crearClienteWorker() {
+  const base = {
+    RESP: 2,
+    socket: { reconnectStrategy: (retries) => Math.min(retries * 100, 3000) },
+  }
+  return createClient(
+    REDIS_URL
+      ? { ...base, url: REDIS_URL }
+      : { ...base, socket: { ...base.socket, host: REDIS_HOST, port: REDIS_PORT } }
+  )
+}
+
 async function start() {
   await mongoose.connect(MONGO_URI)
   console.log('✓ Worker: MongoDB conectado')
 
-  await conectarRedis()
+  // Conexión dedicada para el Worker (no se comparte con Queue/QueueEvents,
+  // lo que evita conflictos cuando corre dentro del proceso de la API).
+  const clienteWorker = crearClienteWorker()
+  clienteWorker.on('error', (err) => console.error('✗ Worker Redis error:', err.message))
+  await clienteWorker.connect()
   console.log('✓ Worker: Redis conectado')
 
   const worker = new Worker('import', procesarImport, {
-    connection: redisClient,
+    connection: clienteWorker,
     concurrency: 1,
   })
 
@@ -283,7 +299,13 @@ async function start() {
   console.log('✓ Worker escuchando jobs de importación...')
 }
 
-start().catch((err) => {
-  console.error('Error arrancando worker:', err)
-  process.exit(1)
-})
+// Arrancar solo si se ejecuta directamente (npm run worker). Si se importa
+// desde server.js, quien llama a start() gestiona el arranque y los errores.
+if (require.main === module) {
+  start().catch((err) => {
+    console.error('Error arrancando worker:', err)
+    process.exit(1)
+  })
+}
+
+module.exports = { start }

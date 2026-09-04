@@ -30,3 +30,28 @@ services:
         value: "1000"
       - key: REDIS_URL
         sync: false
+
+  - type: worker
+    name: catalogobulk-worker
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run worker
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: "1h"
+      - key: MAX_FILE_SIZE_MB
+        value: "50"
+      - key: BATCH_SIZE
+        value: "500"
+      - key: CACHE_TTL_SECONDS
+        value: "300"
+      - key: IMPORT_ERRORS_CAP
+        value: "1000"
+      - key: REDIS_URL
+        sync: false
