@@ -1,5 +1,8 @@
 // usuario.controller.js
+import bcrypt from 'bcrypt';
 import Usuario from './usuario.model.js'; // ajustá la ruta si el modelo está en otro lado
+
+const SALT_ROUNDS = 10;
 
 class UsuarioController {
   async list(req, res, next) {
@@ -26,8 +29,13 @@ class UsuarioController {
 
   async create(req, res, next) {
     try {
-      const nuevoUsuario = await Usuario.create(req.body);
-      return res.status(201).json({ message: 'Usuario creado', data: nuevoUsuario });
+      const data = { ...req.body };
+      if (data.password) {
+        data.password = await bcrypt.hash(data.password, SALT_ROUNDS);
+      }
+      const nuevoUsuario = await Usuario.create(data);
+      const { password, ...usuarioSinPassword } = nuevoUsuario.toObject();
+      return res.status(201).json({ message: 'Usuario creado', data: usuarioSinPassword });
     } catch (error) {
       if (error.code === 11000) {
         return res.status(409).json({ message: 'El email ya está registrado' });
@@ -39,7 +47,11 @@ class UsuarioController {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const usuario = await Usuario.findByIdAndUpdate(id, req.body, {
+      const data = { ...req.body };
+      if (data.password) {
+        data.password = await bcrypt.hash(data.password, SALT_ROUNDS);
+      }
+      const usuario = await Usuario.findByIdAndUpdate(id, data, {
         new: true,
         runValidators: true,
       });
@@ -67,6 +79,19 @@ class UsuarioController {
         message: `Estado de usuario ${id} actualizado`,
         data: usuario,
       });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async remove(req, res, next) {
+    try {
+      const { id } = req.params;
+      const usuario = await Usuario.findByIdAndDelete(id);
+      if (!usuario) {
+        return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+      return res.status(204).send();
     } catch (error) {
       return next(error);
     }

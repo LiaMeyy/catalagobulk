@@ -25,6 +25,7 @@ const importJobSchema = new mongoose.Schema(
     exitosos: { type: Number, default: 0 },
     fallidos: { type: Number, default: 0 },
     errores: { type: [errorItemSchema], default: [] },
+    advertencias: { type: [errorItemSchema], default: [] },
     bullJobId: { type: String, default: null },
     motivoFallo: { type: String, default: null },
     startedAt: { type: Date, default: null },

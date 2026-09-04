@@ -1,13 +1,12 @@
 // proveedor.controller.js
 import Proveedor from './proveedor.model.js'; // ajustá la ruta si el modelo está en otro lado
-import Producto from '../productos/producto.model.js'; // para el chequeo de integridad al eliminar
 
 class ProveedorController {
   async list(req, res, next) {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
-      const filtro = {};
+      const filtro = { activo: true };
 
       if (req.query.activo !== undefined) {
         filtro.activo = req.query.activo === 'true';
@@ -78,22 +77,15 @@ class ProveedorController {
   async remove(req, res, next) {
     try {
       const { id } = req.params;
-
-      const proveedor = await Proveedor.findById(id);
+      const proveedor = await Proveedor.findByIdAndUpdate(
+        id,
+        { activo: false },
+        { new: true, runValidators: true }
+      );
       if (!proveedor) {
         return res.status(404).json({ message: 'Proveedor no encontrado' });
       }
-
-      // integridad: no se puede eliminar si tiene productos asociados
-      const tieneProductos = await Producto.exists({ proveedorId: id });
-      if (tieneProductos) {
-        return res.status(409).json({
-          message: 'No se puede eliminar: el proveedor tiene productos asociados. Usá activo: false en su lugar.',
-        });
-      }
-
-      await Proveedor.findByIdAndDelete(id);
-      return res.status(204).send();
+      return res.status(200).json({ message: `Proveedor ${id} desactivado`, data: proveedor });
     } catch (error) {
       return next(error);
     }

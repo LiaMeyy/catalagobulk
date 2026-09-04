@@ -4,7 +4,11 @@ import Categoria from './categoria.model.js';
 class CategoriaController {
   async list(req, res, next) {
     try {
-      const categorias = await Categoria.find();
+      const filtro = { activo: true };
+      if (req.query.activo !== undefined) {
+        filtro.activo = req.query.activo === 'true';
+      }
+      const categorias = await Categoria.find(filtro);
       return res.status(200).json({ message: 'Listado de categorías', data: categorias });
     } catch (error) {
       return next(error);
@@ -50,13 +54,15 @@ class CategoriaController {
   async remove(req, res, next) {
     try {
       const { id } = req.params;
-      const categoria = await Categoria.findByIdAndDelete(id);
+      const categoria = await Categoria.findByIdAndUpdate(
+        id,
+        { activo: false },
+        { new: true, runValidators: true }
+      );
       if (!categoria) {
         return res.status(404).json({ message: 'Categoría no encontrada' });
       }
-      // ojo: borrar la categoría NO borra los productos que la referencian
-      // quedarían apuntando a un slug sin metadata (comportamiento esperado según el PDF)
-      return res.status(204).send();
+      return res.status(200).json({ message: `Categoría ${id} desactivada`, data: categoria });
     } catch (error) {
       return next(error);
     }

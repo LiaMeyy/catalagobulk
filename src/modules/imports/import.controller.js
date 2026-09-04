@@ -57,6 +57,7 @@ class ImportController {
         fallidos: importJob.fallidos,
         porcentaje,
         errores: importJob.errores,
+        advertencias: importJob.advertencias,
         startedAt: importJob.startedAt,
         finishedAt: importJob.finishedAt,
       });

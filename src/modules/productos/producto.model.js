@@ -75,6 +75,11 @@ const productoSchema = new mongoose.Schema(
         return this.stock > 0;
       },
     },
+
+    activo: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

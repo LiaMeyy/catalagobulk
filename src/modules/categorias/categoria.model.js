@@ -10,6 +10,11 @@ const categoriaSchema = new mongoose.Schema(
       default: null,
       match: [/^https?:\/\/.+/, 'URL de imagen inválida'],
     },
+
+    activo: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );
