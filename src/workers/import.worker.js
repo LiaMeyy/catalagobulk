@@ -11,6 +11,9 @@ const { crearConexionBullMQ } = require('../config/bullConnection')
 const ImportJob = require('../modules/imports/importJob.model')
 const Producto = require('../modules/productos/producto.model')
 const Categoria = require('../modules/categorias/categoria.model')
+const { invalidarProductos } = require('../utils/cache')
+
+const HEADERS_CSV = ['sku', 'nombre', 'precio', 'stock', 'categoria', 'descripcion', 'imagenUrl']
 
 // ── Validación ──────────────────────────────────────────────────────────────
 function esUrlValida(url) {
@@ -23,7 +26,12 @@ function validarFila(fila, index) {
   if (!fila.sku || !fila.sku.trim()) errores.push('sku vacío')
   if (!fila.nombre || !fila.nombre.trim()) errores.push('nombre vacío')
   if (fila.precio === '' || isNaN(Number(fila.precio)) || Number(fila.precio) < 0) errores.push('precio inválido')
-  if (fila.stock === '' || isNaN(Number(fila.stock)) || Number(fila.stock) < 0) errores.push('stock inválido')
+  if (
+    fila.stock === '' ||
+    isNaN(Number(fila.stock)) ||
+    !Number.isInteger(Number(fila.stock)) ||
+    Number(fila.stock) < 0
+  ) errores.push('stock inválido')
   if (!fila.categoria || !fila.categoria.trim()) errores.push('categoria vacía')
 
   return errores
@@ -84,7 +92,13 @@ async function* leerCSV(ruta) {
   let headers = null
   for await (const line of rl) {
     if (!line.trim()) continue
-    if (!headers) { headers = parseCSVLine(line); continue }
+    if (!headers) {
+      headers = parseCSVLine(line).map((header) => header.trim())
+      if (headers.length !== HEADERS_CSV.length || headers.some((header, index) => header !== HEADERS_CSV[index])) {
+        throw new Error(`Header CSV inválido. Se esperaba: ${HEADERS_CSV.join(',')}`)
+      }
+      continue
+    }
     const valores = parseCSVLine(line)
     const fila = {}
     headers.forEach((h, i) => { fila[h.trim()] = valores[i] !== undefined ? valores[i] : '' })
@@ -100,7 +114,7 @@ async function* leerJSON(ruta) {
 }
 
 // ── Procesar job ─────────────────────────────────────────────────────────────
-async function procesarImportJob({ importJobId, archivoRuta, proveedorId }) {
+async function procesarImportJob({ importJobId, archivoRuta, proveedorId }, job = null) {
   // Transición atómica: solo si está en 'pending' pasa a 'processing'
   const jobActualizado = await ImportJob.findOneAndUpdate(
     { _id: importJobId, estado: 'pending' },
@@ -191,6 +205,7 @@ async function procesarImportJob({ importJobId, archivoRuta, proveedorId }) {
 
         // Reportar progreso
         await ImportJob.findByIdAndUpdate(importJobId, { procesados, exitosos, fallidos, errores })
+        if (job) await job.updateProgress({ importJobId, procesados, exitosos, fallidos })
       }
     }
 
@@ -201,6 +216,8 @@ async function procesarImportJob({ importJobId, archivoRuta, proveedorId }) {
       fallidos = resultado.fallidos
       errores = resultado.errores
     }
+
+    if (job) await job.updateProgress({ importJobId, procesados, exitosos, fallidos })
 
     // Upsert categorías nuevas en batch (bulkWrite)
     if (categoriasNuevas.size > 0) {
@@ -224,6 +241,8 @@ async function procesarImportJob({ importJobId, archivoRuta, proveedorId }) {
       finishedAt: new Date(),
     })
 
+    await invalidarProductos()
+
     return { importJobId, procesados, exitosos, fallidos }
   } catch (err) {
     // Error irrecuperable durante el procesamiento
@@ -236,6 +255,7 @@ async function procesarImportJob({ importJobId, archivoRuta, proveedorId }) {
       fallidos,
       errores,
     })
+    await invalidarProductos()
     throw err
   }
 }
@@ -270,7 +290,7 @@ async function start() {
   const clienteWorker = crearConexionBullMQ()
   console.log('✓ Worker: Redis conectado')
 
-  const worker = new Worker('import', (job) => procesarImportJob(job.data), {
+  const worker = new Worker('import', (job) => procesarImportJob(job.data, job), {
     connection: clienteWorker,
     concurrency: 1,
   })

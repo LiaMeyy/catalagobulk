@@ -39,9 +39,15 @@ productoSchema.pre('save', function () {
 
 productoSchema.pre('findOneAndUpdate', function () {
   const update = this.getUpdate()
-  if (update && update.stock !== undefined) {
-    update.disponible = update.stock > 0
+  const stock = update?.stock ?? update?.$set?.stock
+  if (stock !== undefined) {
+    const disponible = stock > 0
+    if (update.$set) update.$set.disponible = disponible
+    else update.disponible = disponible
   }
 })
+
+productoSchema.index({ createdAt: -1 })
+productoSchema.index({ disponible: 1, createdAt: -1 })
 
 module.exports = mongoose.model('Producto', productoSchema, 'productos')

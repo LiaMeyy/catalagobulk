@@ -14,7 +14,12 @@ async function findAll({
   const filtro = {}
 
   if (categoria) filtro.categoria = categoria
-  if (search) filtro.nombre = { $regex: search, $options: 'i' }
+  if (search) {
+    filtro.$or = [
+      { nombre: { $regex: search, $options: 'i' } },
+      { sku: { $regex: search, $options: 'i' } },
+    ]
+  }
 
   if (proveedor) {
     // puede ser slug o id

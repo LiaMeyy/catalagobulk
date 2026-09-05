@@ -2,6 +2,7 @@ const productoRepository = require('./producto.repository')
 const Proveedor = require('../proveedores/proveedor.model')
 const Categoria = require('../categorias/categoria.model')
 const AppError = require('../../errors/AppError')
+const { recordarCache, invalidarProductos } = require('../../utils/cache')
 
 // Normaliza el nombre de categoria igual que el import worker (slug en
 // minusculas) para que el mismo concepto no genere categorias distintas.
@@ -33,11 +34,15 @@ async function asegurarCategoria(valor) {
 }
 
 async function listar({ page, limit, categoria, proveedor, disponible, search, sortBy, descending }) {
-  return productoRepository.findAll({ page, limit, categoria, proveedor, disponible, search, sortBy, descending })
+  const parametros = { page, limit, categoria, proveedor, disponible, search, sortBy, descending }
+  const clave = `catalogo:productos:list:${JSON.stringify(parametros)}`
+  return recordarCache(clave, () => productoRepository.findAll(parametros))
 }
 
 async function listarPublico({ page, limit, categoria, proveedor, search, sortBy, descending }) {
-  return productoRepository.findAll({ page, limit, categoria, proveedor, disponible: true, search, sortBy, descending })
+  const parametros = { page, limit, categoria, proveedor, disponible: true, search, sortBy, descending }
+  const clave = `catalogo:productos:public:${JSON.stringify(parametros)}`
+  return recordarCache(clave, () => productoRepository.findAll(parametros))
 }
 
 async function obtenerPorId(id) {
@@ -47,11 +52,11 @@ async function obtenerPorId(id) {
 }
 
 async function obtenerStats() {
-  return productoRepository.stats()
+  return recordarCache('catalogo:productos:stats', () => productoRepository.stats())
 }
 
 async function obtenerStatsPublico() {
-  return productoRepository.statsPublico()
+  return recordarCache('catalogo:productos:stats:public', () => productoRepository.statsPublico())
 }
 
 async function crear(datos) {
@@ -66,7 +71,9 @@ async function crear(datos) {
   const categoria = normalizarCategoria(datos.categoria)
   await asegurarCategoria(categoria)
 
-  return productoRepository.crear({ ...datos, categoria })
+  const producto = await productoRepository.crear({ ...datos, categoria })
+  await invalidarProductos()
+  return producto
 }
 
 async function actualizar(id, datos) {
@@ -85,12 +92,14 @@ async function actualizar(id, datos) {
 
   const producto = await productoRepository.updateById(id, datos)
   if (!producto) throw new AppError('Producto no encontrado', 404, 'PRODUCTO_NOT_FOUND')
+  await invalidarProductos()
   return producto
 }
 
 async function eliminar(id) {
   const producto = await productoRepository.deleteById(id)
   if (!producto) throw new AppError('Producto no encontrado', 404, 'PRODUCTO_NOT_FOUND')
+  await invalidarProductos()
 }
 
 module.exports = { listar, listarPublico, obtenerPorId, obtenerStats, obtenerStatsPublico, crear, actualizar, eliminar }

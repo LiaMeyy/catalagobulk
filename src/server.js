@@ -27,8 +27,9 @@ async function start() {
       console.log(`✓ Servidor corriendo en http://localhost:${PORT}`)
       console.log(`  Health: http://localhost:${PORT}/health`)
     })
-
-    await iniciarWorker()
+    if (process.env.RUN_WORKER === 'true') {
+      await iniciarWorker()
+    }
   } catch (err) {
     console.error('Error al arrancar:', err.message)
     process.exit(1)

@@ -1,8 +1,8 @@
 # Render Blueprint para el backend CatálogoBulk
 # Documentación: https://render.com/docs/blueprint-spec
 #
-# ARQUITECTURA ELEGIDA: UN solo servicio web que corre la API y el worker de
-# importación en el MISMO proceso (server.js ya llama a iniciarWorker()).
+# ARQUITECTURA DE RENDER: un solo servicio web activa API y worker mediante
+# RUN_WORKER=true porque los servicios separados no comparten uploads/.
 # Así la API y el worker comparten el mismo filesystem (uploads/) y el archivo
 # subido por la API es legible por el worker. Un servicio worker separado NO
 # conviene aquí: al estar en contenedores distintos no compartiría uploads/
@@ -21,7 +21,7 @@ services:
       - source: 0.0.0.0/0
         description: permitir conexion desde el servicio web (y externa)
 
-  # API + worker de importación en un solo contenedor.
+  # API + worker de importación en un solo contenedor en Render.
   - type: web
     name: catalogobulk-api
     runtime: docker
@@ -47,6 +47,8 @@ services:
         value: "300"
       - key: IMPORT_ERRORS_CAP
         value: "1000"
+      - key: RUN_WORKER
+        value: "true"
       # Conexión al Key Value de Render por red privada (redis://...).
       - key: REDIS_URL
         fromService:
