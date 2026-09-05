@@ -1,19 +1,38 @@
 # Render Blueprint para el backend CatálogoBulk
 # Documentación: https://render.com/docs/blueprint-spec
 #
-# NOTA: El bloque `databases` del blueprint no soporta `type: redis`, así que
-# el Redis se crea a mano en el Dashboard y su REDIS_URL se pega aquí como
-# variable (ver instrucciones). MONGO_URI y JWT_SECRET se configuran igual.
+# ARQUITECTURA ELEGIDA: UN solo servicio web que corre la API y el worker de
+# importación en el MISMO proceso (server.js ya llama a iniciarWorker()).
+# Así la API y el worker comparten el mismo filesystem (uploads/) y el archivo
+# subido por la API es legible por el worker. Un servicio worker separado NO
+# conviene aquí: al estar en contenedores distintos no compartiría uploads/
+# y el import fallaría por "archivo no encontrado".
+#
+# Mongo: MongoDB Atlas (externo). Su MONGO_URI se pega al crear el servicio.
+# Redis: Key Value de Render (se crea automáticamente con el blueprint).
 
 services:
+  # Redis de Render (tipo Key Value). Más info: https://render.com/docs/key-value
+  - type: keyvalue
+    name: catalogobulk-redis
+    plan: free
+    maxmemoryPolicy: noeviction # Recomendado para colas de jobs (no perder jobs)
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: permitir conexion desde el servicio web (y externa)
+
+  # API + worker de importación en un solo contenedor.
   - type: web
     name: catalogobulk-api
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
+
+    # Render inyecta PORT automáticamente (la app escucha en process.env.PORT).
+    # NO definas PORT aquí para no sobrescribirlo.
     envVars:
-      - key: PORT
-        value: "3000"
+      # Connection string de MongoDB Atlas. Render te pedirá el valor al crear.
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -28,30 +47,9 @@ services:
         value: "300"
       - key: IMPORT_ERRORS_CAP
         value: "1000"
+      # Conexión al Key Value de Render por red privada (redis://...).
       - key: REDIS_URL
-        sync: false
-
-  - type: worker
-    name: catalogobulk-worker
-    runtime: node
-    buildCommand: npm install
-    startCommand: npm run worker
-    envVars:
-      - key: PORT
-        value: "3000"
-      - key: MONGO_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: JWT_EXPIRES_IN
-        value: "1h"
-      - key: MAX_FILE_SIZE_MB
-        value: "50"
-      - key: BATCH_SIZE
-        value: "500"
-      - key: CACHE_TTL_SECONDS
-        value: "300"
-      - key: IMPORT_ERRORS_CAP
-        value: "1000"
-      - key: REDIS_URL
-        sync: false
+        fromService:
+          name: catalogobulk-redis
+          type: keyvalue
+          property: connectionString
