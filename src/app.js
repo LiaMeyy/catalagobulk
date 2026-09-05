@@ -60,6 +60,13 @@ app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/imports', importRoutes);
 
+// Servir los archivos estáticos del frontend (cambia 'public' por 'dist' si aplica)
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.use(errorHandler);
 
 export default app;
