@@ -38,7 +38,7 @@ async function crear(datos) {
 }
 
 async function updateById(id, datos) {
-  return Proveedor.findByIdAndUpdate(id, datos, { new: true, runValidators: true })
+  return Proveedor.findByIdAndUpdate(id, datos, { returnDocument: 'after', runValidators: true })
 }
 
 async function deleteById(id) {

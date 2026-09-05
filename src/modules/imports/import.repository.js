@@ -18,7 +18,7 @@ async function findAll({ page = 1, limit = 20 }) {
 }
 
 async function updateById(id, datos) {
-  return ImportJob.findByIdAndUpdate(id, datos, { new: true })
+  return ImportJob.findByIdAndUpdate(id, datos, { returnDocument: 'after' })
 }
 
 module.exports = { crear, findById, findAll, updateById }

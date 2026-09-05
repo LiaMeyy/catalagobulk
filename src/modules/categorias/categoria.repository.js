@@ -17,7 +17,7 @@ async function crear(datos) {
 }
 
 async function updateById(id, datos) {
-  return Categoria.findByIdAndUpdate(id, datos, { new: true, runValidators: true })
+  return Categoria.findByIdAndUpdate(id, datos, { returnDocument: 'after', runValidators: true })
 }
 
 async function deleteById(id) {
@@ -29,7 +29,7 @@ async function upsertBySlug(slug) {
   return Categoria.findOneAndUpdate(
     { slug },
     { $setOnInsert: { slug, nombre, descripcion: null, imagenUrl: null } },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   )
 }
 

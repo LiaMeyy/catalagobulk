@@ -15,6 +15,9 @@ const usuarioRoutes = require('./modules/usuarios/usuario.routes')
 
 const app = express()
 
+// Render termina TLS y reenvia la IP del cliente mediante X-Forwarded-For.
+app.set('trust proxy', 1)
+
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))

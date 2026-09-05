@@ -60,7 +60,7 @@ async function crear(datos) {
 }
 
 async function updateById(id, datos) {
-  return Producto.findByIdAndUpdate(id, datos, { new: true, runValidators: true })
+  return Producto.findByIdAndUpdate(id, datos, { returnDocument: 'after', runValidators: true })
 }
 
 async function deleteById(id) {

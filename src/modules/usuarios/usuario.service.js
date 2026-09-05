@@ -44,7 +44,7 @@ async function actualizar(id, datos) {
 
   Object.keys(update).forEach((key) => update[key] === undefined && delete update[key])
 
-  const usuario = await Usuario.findByIdAndUpdate(id, update, { new: true, runValidators: true })
+  const usuario = await Usuario.findByIdAndUpdate(id, update, { returnDocument: 'after', runValidators: true })
   if (!usuario) throw new AppError('Usuario no encontrado', 404, 'USUARIO_NOT_FOUND')
   return usuario
 }
