@@ -15,6 +15,12 @@ async function start() {
     await conectarRedis()
 
     const httpServer = http.createServer(app)
+
+    // FIX: aumentar timeouts para permitir subida de archivos grandes
+    httpServer.timeout = 600000          // 10 minutos
+    httpServer.keepAliveTimeout = 620000 // debe ser mayor que timeout
+    httpServer.headersTimeout = 630000   // debe ser mayor que keepAliveTimeout
+
     inicializarSockets(httpServer)
 
     httpServer.listen(PORT, () => {
@@ -22,8 +28,6 @@ async function start() {
       console.log(`  Health: http://localhost:${PORT}/health`)
     })
 
-    // Worker de BullMQ (cola asíncrona) en el mismo proceso, porque en el
-    // free tier de Render no hay Background Workers sin pagar.
     await iniciarWorker()
   } catch (err) {
     console.error('Error al arrancar:', err.message)
