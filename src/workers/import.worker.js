@@ -1,7 +1,7 @@
 require('dotenv').config()
 require('../config/env')
 
-const { Worker } = require('bullmq')
+const { Queue, Worker } = require('bullmq')
 const mongoose = require('mongoose')
 const fs = require('fs')
 const path = require('path')
@@ -94,7 +94,12 @@ async function* leerCSV(ruta) {
     if (!line.trim()) continue
     if (!headers) {
       headers = parseCSVLine(line).map((header) => header.trim())
-      if (headers.length !== HEADERS_CSV.length || headers.some((header, index) => header !== HEADERS_CSV[index])) {
+      const headerValido =
+        headers.length >= 5 &&
+        headers.length <= HEADERS_CSV.length &&
+        headers.every((header, index) => header === HEADERS_CSV[index])
+
+      if (!headerValido) {
         throw new Error(`Header CSV inválido. Se esperaba: ${HEADERS_CSV.join(',')}`)
       }
       continue
@@ -281,6 +286,35 @@ async function insertarLote(lote, filasEnLote, errores, fallidos, cap) {
   }
 }
 
+async function recuperarImportsPendientes() {
+  const conexionCola = crearConexionBullMQ()
+  const cola = new Queue('import', { connection: conexionCola })
+
+  try {
+    const pendientes = await ImportJob.find({ estado: 'pending' })
+
+    for (const importJob of pendientes) {
+      const jobEnCola = importJob.bullJobId
+        ? await cola.getJob(importJob.bullJobId)
+        : null
+      const estadoCola = jobEnCola ? await jobEnCola.getState() : null
+
+      if (['waiting', 'active', 'delayed', 'paused'].includes(estadoCola)) continue
+
+      const nuevoJob = await cola.add('procesar-import', {
+        importJobId: importJob._id.toString(),
+        archivoRuta: importJob.archivoRuta,
+        proveedorId: importJob.proveedorId.toString(),
+      })
+
+      await ImportJob.findByIdAndUpdate(importJob._id, { bullJobId: nuevoJob.id })
+      console.log(`↻ ImportJob ${importJob._id} reenqueued`)
+    }
+  } finally {
+    await cola.close()
+  }
+}
+
 // ── Arrancar worker ──────────────────────────────────────────────────────────
 async function start() {
   await mongoose.connect(MONGO_URI)
@@ -288,15 +322,19 @@ async function start() {
 
   // Conexión ioredis dedicada para el Worker (requisito de BullMQ).
   const clienteWorker = crearConexionBullMQ()
-  console.log('✓ Worker: Redis conectado')
 
   const worker = new Worker('import', (job) => procesarImportJob(job.data, job), {
     connection: clienteWorker,
     concurrency: 1,
   })
 
+  await worker.waitUntilReady()
+  console.log('✓ Worker: Redis conectado')
+  await recuperarImportsPendientes()
+
   worker.on('completed', (job) => console.log(`✓ Job ${job.id} completado`))
   worker.on('failed', (job, err) => console.error(`✗ Job ${job.id} falló:`, err.message))
+  worker.on('error', (err) => console.error('✗ Worker error:', err.message))
 
   console.log('✓ Worker escuchando jobs de importación...')
 }
@@ -310,4 +348,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { start, procesarImportJob }
+module.exports = { start, procesarImportJob, recuperarImportsPendientes }
