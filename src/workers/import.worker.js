@@ -93,7 +93,7 @@ async function* leerCSV(ruta) {
   for await (const line of rl) {
     if (!line.trim()) continue
     if (!headers) {
-      headers = parseCSVLine(line).map((header) => header.trim())
+      headers = parseCSVLine(line).map((header) => header.replace(/^\uFEFF/, '').trim())
       const headerValido =
         headers.length >= 5 &&
         headers.length <= HEADERS_CSV.length &&
@@ -124,7 +124,7 @@ async function procesarImportJob({ importJobId, archivoRuta, proveedorId }, job 
   const jobActualizado = await ImportJob.findOneAndUpdate(
     { _id: importJobId, estado: 'pending' },
     { estado: 'processing', startedAt: new Date() },
-    { new: true }
+    { returnDocument: 'after' }
   )
 
   if (!jobActualizado) {
@@ -294,6 +294,16 @@ async function recuperarImportsPendientes() {
     const pendientes = await ImportJob.find({ estado: 'pending' })
 
     for (const importJob of pendientes) {
+      if (!fs.existsSync(importJob.archivoRuta)) {
+        await ImportJob.findByIdAndUpdate(importJob._id, {
+          estado: 'failed',
+          motivoFallo: 'El archivo subido ya no existe en el almacenamiento del servidor',
+          finishedAt: new Date(),
+        })
+        console.error(`✗ ImportJob ${importJob._id}: archivo no encontrado`)
+        continue
+      }
+
       const jobEnCola = importJob.bullJobId
         ? await cola.getJob(importJob.bullJobId)
         : null
