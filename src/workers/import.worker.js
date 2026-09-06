@@ -298,8 +298,11 @@ async function recuperarImportsPendientes() {
         ? await cola.getJob(importJob.bullJobId)
         : null
       const estadoCola = jobEnCola ? await jobEnCola.getState() : null
+      const jobAtascado = jobEnCola && estadoCola === 'waiting' && Date.now() - jobEnCola.timestamp > 30000
 
-      if (['waiting', 'active', 'delayed', 'paused'].includes(estadoCola)) continue
+      if (['active', 'delayed', 'paused'].includes(estadoCola)) continue
+      if (estadoCola === 'waiting' && !jobAtascado) continue
+      if (jobAtascado) await jobEnCola.remove()
 
       const nuevoJob = await cola.add('procesar-import', {
         importJobId: importJob._id.toString(),
@@ -331,6 +334,10 @@ async function start() {
   await worker.waitUntilReady()
   console.log('✓ Worker: Redis conectado')
   await recuperarImportsPendientes()
+  const intervaloRecuperacion = setInterval(() => {
+    recuperarImportsPendientes().catch((err) => console.error('✗ Recovery error:', err.message))
+  }, 30000)
+  intervaloRecuperacion.unref()
 
   worker.on('completed', (job) => console.log(`✓ Job ${job.id} completado`))
   worker.on('failed', (job, err) => console.error(`✗ Job ${job.id} falló:`, err.message))

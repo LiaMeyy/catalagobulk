@@ -19,11 +19,21 @@ async function crearImport({ archivo, proveedorId, usuarioId }) {
   })
 
   // Encolar en BullMQ (procesamiento asíncrono, requisito del proyecto).
-  const bullJob = await importQueue.add('procesar-import', {
-    importJobId: importJob._id.toString(),
-    archivoRuta: archivo.path,
-    proveedorId: proveedorId.toString(),
-  })
+  let bullJob
+  try {
+    bullJob = await importQueue.add('procesar-import', {
+      importJobId: importJob._id.toString(),
+      archivoRuta: archivo.path,
+      proveedorId: proveedorId.toString(),
+    })
+  } catch (err) {
+    await importRepository.updateById(importJob._id, {
+      estado: 'failed',
+      motivoFallo: `No se pudo encolar la importación: ${err.message}`,
+      finishedAt: new Date(),
+    })
+    throw err
+  }
 
   // Guardar bullJobId para trazabilidad
   await importRepository.updateById(importJob._id, { bullJobId: bullJob.id })
