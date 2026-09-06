@@ -4,8 +4,6 @@ const path = require('path')
 const TOTAL_FILAS = 120000
 const OUTPUT = path.join(__dirname, 'catalogo-prueba.csv')
 
-const proveedores = ['acme-corp', 'bina', 'nbc']
-
 const categorias = ['ropa', 'hogar', 'electronica', 'deportes', 'juguetes']
 
 // Imágenes reales de Unsplash por categoría
@@ -115,7 +113,7 @@ function generarDescripcion(nombre, categoria) {
 console.log(`Generando ${TOTAL_FILAS} filas en ${OUTPUT}...`)
 
 const stream = fs.createWriteStream(OUTPUT)
-stream.write('sku,nombre,precio,stock,categoria,proveedor,descripcion,imagenUrl\n')
+stream.write('sku,nombre,precio,stock,categoria,descripcion,imagenUrl\n')
 
 for (let i = 1; i <= TOTAL_FILAS; i++) {
   const categoria  = pick(categorias)
@@ -123,11 +121,10 @@ for (let i = 1; i <= TOTAL_FILAS; i++) {
   const nombre     = generarNombre(categoria)
   const precio     = generarPrecio(categoria)
   const stock      = randomInt(0, 500)
-  const proveedor  = pick(proveedores)
   const descripcion = generarDescripcion(nombre, categoria).replace(/,/g, ';')
   const imagenUrl  = pick(imagenesPorCategoria[categoria])
 
-  stream.write(`${sku},"${nombre}",${precio},${stock},${categoria},${proveedor},"${descripcion}",${imagenUrl}\n`)
+  stream.write(`${sku},"${nombre}",${precio},${stock},${categoria},"${descripcion}",${imagenUrl}\n`)
 
   if (i % 10000 === 0) console.log(`  → ${i} filas generadas...`)
 }
